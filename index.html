@@ -198,6 +198,7 @@
       position: relative;
       overflow: hidden;
     }
+
     /*
     .hero::before {
       content: "";
@@ -1908,24 +1909,26 @@ steeringGroup.<span class="s-fn">POST</span>(<span class="s-str">"/steer"</span>
         </div>
       </section>
 
-      <!-- Section 8: Startup Order -->
+      <!-- Section 8: Startup Order --> 
       <section id="startup">
         <div class="section-label">
           <span class="section-num">§ 08</span>
           <span class="section-rule"></span>
         </div>
         <h2>Startup Order</h2>
-
+        <!--
         <div class="callout callout-error">
           <span class="callout-icon">✕</span>
           <div class="callout-body">
-            <strong>After ANY SMF restart, all UPFs must be restarted too.</strong>PFCP associations are lost when SMF
-            restarts. Always restart UPFs
+            <strong>After ANY SMF restart, all UPFs must be restarted too.</strong>
+            PFCP associations are lost when SMF restarts. Always restart UPFs
             after SMF, then reconnect the UE.
           </div>
         </div>
-
+-->
         <div class="steps">
+
+          <!-- STEP 1 -->
           <div class="step">
             <div class="step-spine">
               <div class="step-circle">1</div>
@@ -1933,9 +1936,9 @@ steeringGroup.<span class="s-fn">POST</span>(<span class="s-str">"/steer"</span>
             </div>
             <div class="step-body">
               <div class="step-title">
-                Start Core (without SMF)
-                <span class="step-vm">free5gc-core</span>
+                Start I-UPF <span class="step-vm">i-upf</span>
               </div>
+
               <div class="code-wrap">
                 <div class="code-bar">
                   <div class="code-dots">
@@ -1944,14 +1947,17 @@ steeringGroup.<span class="s-fn">POST</span>(<span class="s-str">"/steer"</span>
                   <div class="code-meta">
                     <span class="code-lang">bash</span>
                   </div>
-                  <button class="copy-btn" onclick="copyCode(this)">
-                    Copy
-                  </button>
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
-                <pre><code>cd ~/free5gc &amp;&amp; ./run.sh</code></pre>
+
+                <pre><code>sudo ip link delete upfgtp 2>/dev/null
+cd ~/gtp5g/go-upf && sudo ./upf -c upfcfg.yaml &</code></pre>
+
               </div>
             </div>
           </div>
+
+          <!-- STEP 2 -->
           <div class="step">
             <div class="step-spine">
               <div class="step-circle">2</div>
@@ -1959,8 +1965,9 @@ steeringGroup.<span class="s-fn">POST</span>(<span class="s-str">"/steer"</span>
             </div>
             <div class="step-body">
               <div class="step-title">
-                Start I-UPF <span class="step-vm">i-upf</span>
+                Start PSA-UPF <span class="step-vm">psa-upf</span>
               </div>
+
               <div class="code-wrap">
                 <div class="code-bar">
                   <div class="code-dots">
@@ -1969,15 +1976,17 @@ steeringGroup.<span class="s-fn">POST</span>(<span class="s-str">"/steer"</span>
                   <div class="code-meta">
                     <span class="code-lang">bash</span>
                   </div>
-                  <button class="copy-btn" onclick="copyCode(this)">
-                    Copy
-                  </button>
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
+
                 <pre><code>sudo ip link delete upfgtp 2>/dev/null
-cd ~/gtp5g/go-upf &amp;&amp; sudo ./upf -c upfcfg.yaml &amp;</code></pre>
+cd ~/gtp5g/go-upf && sudo ./upf -c upfcfg.yaml &</code></pre>
+
               </div>
             </div>
           </div>
+
+          <!-- STEP 3 -->
           <div class="step">
             <div class="step-spine">
               <div class="step-circle">3</div>
@@ -1985,8 +1994,9 @@ cd ~/gtp5g/go-upf &amp;&amp; sudo ./upf -c upfcfg.yaml &amp;</code></pre>
             </div>
             <div class="step-body">
               <div class="step-title">
-                Start PSA-UPF <span class="step-vm">psa-upf</span>
+                Start PSA-UPF2 <span class="step-vm">psa-upf2</span>
               </div>
+
               <div class="code-wrap">
                 <div class="code-bar">
                   <div class="code-dots">
@@ -1995,24 +2005,29 @@ cd ~/gtp5g/go-upf &amp;&amp; sudo ./upf -c upfcfg.yaml &amp;</code></pre>
                   <div class="code-meta">
                     <span class="code-lang">bash</span>
                   </div>
-                  <button class="copy-btn" onclick="copyCode(this)">
-                    Copy
-                  </button>
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
+
                 <pre><code>sudo ip link delete upfgtp 2>/dev/null
-cd ~/gtp5g/go-upf &amp;&amp; sudo ./upf -c upfcfg.yaml &amp;</code></pre>
+cd ~/gtp5g/go-upf && sudo ./upf -c upfcfg.yaml &</code></pre>
+
               </div>
             </div>
           </div>
+
+          <!-- STEP 4 -->
           <div class="step">
             <div class="step-spine">
               <div class="step-circle">4</div>
               <div class="step-line"></div>
             </div>
+
             <div class="step-body">
               <div class="step-title">
-                Start PSA-UPF2 <span class="step-vm">psa-upf2</span>
+                Start Core
+                <span class="step-vm">free5gc-core</span>
               </div>
+
               <div class="code-wrap">
                 <div class="code-bar">
                   <div class="code-dots">
@@ -2021,24 +2036,66 @@ cd ~/gtp5g/go-upf &amp;&amp; sudo ./upf -c upfcfg.yaml &amp;</code></pre>
                   <div class="code-meta">
                     <span class="code-lang">bash</span>
                   </div>
-                  <button class="copy-btn" onclick="copyCode(this)">
-                    Copy
-                  </button>
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
-                <pre><code>sudo ip link delete upfgtp 2>/dev/null
-cd ~/gtp5g/go-upf &amp;&amp; sudo ./upf -c upfcfg.yaml &amp;</code></pre>
+
+                <pre><code>cd ~/free5gc && ./build.sh</code></pre>
+              </div>
+
+              <div class="code-wrap">
+                <div class="code-bar" style="background:whitesmoke;">
+                  <div class="code-dots" style="display:none;"></div>
+                  <div class="code-meta">
+                    <span class="code-file" style="font-weight:bold;letter-spacing:1px;color:black;">build.sh</span>
+                  </div>
+                  <button class="copy-btn" onclick="copyCode(this)" style="background:whitesmoke;">Copy</button>
+                </div>
+
+                <pre style="background:whitesmoke;color:#3a1810"><code>#!/usr/bin/env bash
+PID_LIST=()
+NF_LIST="amf udr pcf udm nssf ausf"
+
+export GIN_MODE=release
+
+./bin/nrf &
+PID_LIST+=($!)
+sleep 1
+
+./bin/smf -c config/smfcfg.yaml -u config/uerouting.yaml &
+PID_LIST+=($!)
+sleep 1
+
+for NF in ${NF_LIST}; do
+  ./bin/${NF} &
+  PID_LIST+=($!)
+  sleep 1
+done
+
+terminate() {
+  sudo kill -SIGTERM ${PID_LIST[${#PID_LIST[@]}-2]} ${PID_LIST[${#PID_LIST[@]}-1]}
+  sleep 2
+}
+
+trap terminate SIGINT
+wait ${PID_LIST}
+</code></pre>
+
               </div>
             </div>
           </div>
+
+          <!-- STEP 5 -->
           <div class="step">
             <div class="step-spine">
               <div class="step-circle">5</div>
               <div class="step-line"></div>
             </div>
+
             <div class="step-body">
               <div class="step-title">
-                Start SMF <span class="step-vm">free5gc-core</span>
+                Start gNB <span class="step-vm">ueransim-gnb</span>
               </div>
+
               <div class="code-wrap">
                 <div class="code-bar">
                   <div class="code-dots">
@@ -2047,54 +2104,29 @@ cd ~/gtp5g/go-upf &amp;&amp; sudo ./upf -c upfcfg.yaml &amp;</code></pre>
                   <div class="code-meta">
                     <span class="code-lang">bash</span>
                   </div>
-                  <button class="copy-btn" onclick="copyCode(this)">
-                    Copy
-                  </button>
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
-                <pre><code>cd ~/free5gc
-sudo ./bin/smf \
-  -c config/smfcfg.yaml \
-  -u config/uerouting.yaml \
-  > /tmp/smf_debug.log 2>&amp;1 &amp;</code></pre>
+
+                <pre><code>cd ~/UERANSIM/build
+sudo ./nr-gnb -c ../config/free5gc-gnb.yaml &</code></pre>
+
               </div>
             </div>
           </div>
+
+          <!-- STEP 6 -->
           <div class="step">
             <div class="step-spine">
               <div class="step-circle">6</div>
               <div class="step-line"></div>
             </div>
-            <div class="step-body">
-              <div class="step-title">
-                Start gNB <span class="step-vm">ueransim-gnb</span>
-              </div>
-              <div class="code-wrap">
-                <div class="code-bar">
-                  <div class="code-dots">
-                    <span></span><span></span><span></span>
-                  </div>
-                  <div class="code-meta">
-                    <span class="code-lang">bash</span>
-                  </div>
-                  <button class="copy-btn" onclick="copyCode(this)">
-                    Copy
-                  </button>
-                </div>
-                <pre><code>cd ~/UERANSIM/build
-sudo ./nr-gnb -c ../config/free5gc-gnb.yaml &amp;</code></pre>
-              </div>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-spine">
-              <div class="step-circle">7</div>
-              <div class="step-line"></div>
-            </div>
+
             <div class="step-body">
               <div class="step-title">
                 Start UE and verify connectivity
                 <span class="step-vm">ueransim-ue</span>
               </div>
+
               <div class="code-wrap">
                 <div class="code-bar">
                   <div class="code-dots">
@@ -2103,17 +2135,18 @@ sudo ./nr-gnb -c ../config/free5gc-gnb.yaml &amp;</code></pre>
                   <div class="code-meta">
                     <span class="code-lang">bash</span>
                   </div>
-                  <button class="copy-btn" onclick="copyCode(this)">
-                    Copy
-                  </button>
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
+
                 <pre><code>cd ~/UERANSIM/build
-sudo ./nr-ue -c ../config/free5gc-ue.yaml &amp;
+sudo ./nr-ue -c ../config/free5gc-ue.yaml &
 sleep 3
 ping -I uesimtun0 10.160.101.145 -c 3   <span class="s-comment"># verify connectivity</span></code></pre>
+
               </div>
             </div>
           </div>
+
         </div>
       </section>
 
@@ -2126,56 +2159,56 @@ ping -I uesimtun0 10.160.101.145 -c 3   <span class="s-comment"># verify connect
         <h2>iptables / Routing Rules</h2>
 
         <h3>PSA-UPF (10.160.101.148)</h3>
-<p>Run after each UPF restart.</p>
-<div class="code-wrap">
-  <div class="code-bar">
-    <div class="code-dots">
-      <span></span><span></span><span></span>
-    </div>
-    <div class="code-meta"><span class="code-lang">bash</span></div>
-    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-  </div>
-  <pre><code><span class="s-comment"># Enable IP masquerading for UE traffic toward Server</span>
+        <p>Run after each UPF restart.</p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="code-meta"><span class="code-lang">bash</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-comment"># Enable IP masquerading for UE traffic toward Server</span>
 sudo iptables -t nat -A POSTROUTING -s 10.60.0.0/16 -o &lt;N6_IFACE&gt; -j MASQUERADE
 
 <span class="s-comment"># Route UE subnet via N6 toward Server</span>
 sudo ip route add 10.160.101.145/32 dev &lt;N6_IFACE&gt;</code></pre>
-</div>
+        </div>
 
-<h3>PSA-UPF2 (10.160.101.198)</h3>
-<p>Run after each UPF restart.</p>
-<div class="code-wrap">
-  <div class="code-bar">
-    <div class="code-dots">
-      <span></span><span></span><span></span>
-    </div>
-    <div class="code-meta"><span class="code-lang">bash</span></div>
-    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-  </div>
-  <pre><code><span class="s-comment"># Same rules mirrored on PSA-UPF2</span>
+        <h3>PSA-UPF2 (10.160.101.198)</h3>
+        <p>Run after each UPF restart.</p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="code-meta"><span class="code-lang">bash</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-comment"># Same rules mirrored on PSA-UPF2</span>
 sudo iptables -t nat -A POSTROUTING -s 10.60.0.0/16 -o &lt;N6_IFACE&gt; -j MASQUERADE
 
 sudo ip route add 10.160.101.145/32 dev &lt;N6_IFACE&gt;</code></pre>
-</div>
+        </div>
 
-<h3>Server VM</h3>
-<p>Run once, or add to <code>/etc/rc.local</code>.</p>
-<div class="code-wrap">
-  <div class="code-bar">
-    <div class="code-dots">
-      <span></span><span></span><span></span>
-    </div>
-    <div class="code-meta"><span class="code-lang">bash</span></div>
-    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-  </div>
-<pre><code><span class="s-comment"># Route PSA-UPF subnets back to the correct UPFs</span>
+        <h3>Server VM</h3>
+        <p>Run once, or add to <code>/etc/rc.local</code>.</p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="code-meta"><span class="code-lang">bash</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-comment"># Route PSA-UPF subnets back to the correct UPFs</span>
 
 <span class="s-comment">#sudo ip route add 10.60.0.0/16 via &lt;PSA-UPF_IP&gt;</span>
 sudo ip route add 10.60.0.0/16 via 10.160.101.148            <span class="s-comment"># PSA-UPF </span>
 
 <span class="s-comment">#sudo ip route add 10.60.0.0/16 via &lt;PSA-UPF2_IP&gt; metric 200</span>
 sudo ip route add 10.60.0.0/16 via 10.160.101.198 metric 200 <span class="s-comment"># PSA-UPF2 </span></code></pre>
-</div>
+        </div>
       </section>
 
       <!-- Section 10: Usage -->
