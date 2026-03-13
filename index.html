@@ -183,6 +183,18 @@
       letter-spacing: 0.06em;
     }
 
+    #ue-table-card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 12px;
+      width: 100%;
+      background: #f9f9f9;
+      box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.05);
+      margin-top: 1em;
+      font-family:  "DM Mono", monospace;
+
+    }
+
     /* ─── Main ─────────────────────────────────────── */
     main {
       flex: 1;
@@ -1164,7 +1176,27 @@
             </tbody>
           </table>
         </div>
-
+        <div class="ue-card-table" id="ue-table-card">
+          <h4 style="margin:0 0 8px 0; font-size:1em; color:black; letter-spacing: 0.5px;">UE Details</h4>
+          <table style="width:100%; border-collapse: collapse; font-size:0.9em;">
+            <thead>
+              <tr style="background:#eee;">
+                <th style="padding:4px; text-align:left;">UE</th>
+                <th style="padding:4px; text-align:left;">IMSI</th>
+                <th style="padding:4px; text-align:left;">DNN</th>
+                <th style="padding:4px; text-align:left;">OP/OPc</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:4px;">UE</td>
+                <td style="padding:4px;">208930000000001</td>
+                <td style="padding:4px;">internet</td>
+                <td style="padding:4px;">OPc</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <h3>Traffic Paths</h3>
         <div class="path-card">
           <div class="path-item path-default">
@@ -1416,10 +1448,11 @@
 
     specificPath:
       - dest: 10.160.101.145/32
-        path: [I-UPF, PSA-UPF2]    <span class="s-comment"># static steering to PSA-UPF2</span>
-
+        path: [I-UPF, PSA-UPF]    <span class="s-comment"># I-UPF -> PSA-UPF</span>
+      - dest: 10.160.101.145/32
+        path: [I-UPF, PSA-UPF2]   <span class="s-comment"># I-UPF -> PSA-UPF2</span>
       - dest: 8.8.8.8/32
-        path: [I-UPF]               <span class="s-comment"># direct exit at I-UPF (optional)</span></code></pre>
+        path: [I-UPF]             <span class="s-comment"># I-UPF -> 8.8.8.8</span></code></pre>
         </div>
 
         <div class="callout callout-warn">
@@ -1909,7 +1942,7 @@ steeringGroup.<span class="s-fn">POST</span>(<span class="s-str">"/steer"</span>
         </div>
       </section>
 
-      <!-- Section 8: Startup Order --> 
+      <!-- Section 8: Startup Order -->
       <section id="startup">
         <div class="section-label">
           <span class="section-num">§ 08</span>
@@ -2220,20 +2253,18 @@ sudo ip route add 10.60.0.0/16 via 10.160.101.198 metric 200 <span class="s-comm
         <h2>Using the Dynamic Steering API</h2>
 
         <div class="callout callout-info">
-          <span class="callout-icon">ℹ</span>
-          <div class="callout-body">
-            The SMF binds to <code>127.0.0.2:8000</code>. All
-            <code>curl</code> commands must be run on the
-            <strong>core VM</strong> with <code>sudo</code>.
+          <span class="callout-icon"></span>
+          <div class="callout-body" style="display: ruby;">
+            The SMF binds to <code>127.0.0.2:8000</code>.<br>
+            All <code>curl</code> commands must be run on the <strong>core VM</strong> with <code>sudo</code>.
           </div>
         </div>
 
-        <h3>Steer to PSA-UPF (10.160.101.148)</h3>
+        <h3>Option A: Direct <code>curl</code> commands</h3>
+        <h4>Steer to PSA-UPF (10.160.101.148)</h4>
         <div class="code-wrap">
           <div class="code-bar">
-            <div class="code-dots">
-              <span></span><span></span><span></span>
-            </div>
+            <div class="code-dots"><span></span><span></span><span></span></div>
             <div class="code-meta"><span class="code-lang">bash</span></div>
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
           </div>
@@ -2242,12 +2273,10 @@ sudo ip route add 10.60.0.0/16 via 10.160.101.198 metric 200 <span class="s-comm
   -d '{"supi":"imsi-208930000000001","targetUpf":"10.160.101.148"}'</code></pre>
         </div>
 
-        <h3>Steer to PSA-UPF2 (10.160.101.198)</h3>
+        <h4>Steer to PSA-UPF2 (10.160.101.198)</h4>
         <div class="code-wrap">
           <div class="code-bar">
-            <div class="code-dots">
-              <span></span><span></span><span></span>
-            </div>
+            <div class="code-dots"><span></span><span></span><span></span></div>
             <div class="code-meta"><span class="code-lang">bash</span></div>
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
           </div>
@@ -2256,12 +2285,10 @@ sudo ip route add 10.60.0.0/16 via 10.160.101.198 metric 200 <span class="s-comm
   -d '{"supi":"imsi-208930000000001","targetUpf":"10.160.101.198"}'</code></pre>
         </div>
 
-        <h3>Expected Response</h3>
+        <h4>Expected Response</h4>
         <div class="code-wrap">
           <div class="code-bar">
-            <div class="code-dots">
-              <span></span><span></span><span></span>
-            </div>
+            <div class="code-dots"><span></span><span></span><span></span></div>
             <div class="code-meta"><span class="code-lang">json</span></div>
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
           </div>
@@ -2273,12 +2300,10 @@ sudo ip route add 10.60.0.0/16 via 10.160.101.198 metric 200 <span class="s-comm
 }</code></pre>
         </div>
 
-        <h3>Verify Active FAR on I-UPF</h3>
+        <h4>Verify Active FAR on I-UPF</h4>
         <div class="code-wrap">
           <div class="code-bar">
-            <div class="code-dots">
-              <span></span><span></span><span></span>
-            </div>
+            <div class="code-dots"><span></span><span></span><span></span></div>
             <div class="code-meta"><span class="code-lang">bash</span></div>
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
           </div>
@@ -2293,12 +2318,64 @@ for f in json.load(sys.stdin):
         print(f"FAR {f['ID']:>3} -> NULL (drop/buffer)")
 EOF</code></pre>
         </div>
+
         <div class="callout callout-info">
-          <span class="callout-icon">ℹ</span>
+          <span class="callout-icon"></span>
           <div class="callout-body">
-            Look for the SDF-filtered FAR (typically FARID=5 or similar). Its
-            <code>PeerAddr</code> should now point to your target UPF IP.
+            Look for the SDF-filtered FAR (typically FARID=5 or 7). Its <code>PeerAddr</code> should now point to your
+            target UPF IP.
           </div>
+        </div>
+
+        <!-- OPTION B -->
+        <h3>Option B: Use <code>steer.sh</code> script (Recommended)</h3>
+        <p>This script automates steering a UE to a target UPF. Usage:</p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>./steer.sh &lt;Targeted PSA-UPF IP&gt;
+# Example: steer to PSA-UPF2
+./steer.sh 10.160.101.198</code></pre>
+        </div>
+
+        <!-- <h4>steer.sh script</h4> -->
+        <div class="code-wrap">
+          <div class="code-bar" style="background:whitesmoke;">
+            <div class="code-dots" style="display:none;"></div>
+            <div class="code-meta">
+              <span class="code-file" style="font-weight:bold;letter-spacing:1px;color:black;">steer.sh</span>
+            </div>
+            <button class="copy-btn" onclick="copyCode(this)" style="background:whitesmoke;">Copy</button>
+          </div>
+          <pre style="background:whitesmoke;color:#3a1810"><code>#!/bin/bash
+TARGET=$1
+SUPI="imsi-208930000000001"
+
+if [ -z "$TARGET" ]; then
+    echo "Usage: $0 &lt;target-upf-ip&gt;"
+    exit 1
+fi
+
+echo "Steering to $TARGET..."
+for i in $(seq 1 20); do
+    RESULT=$(sudo curl -s -v -X POST http://127.0.0.2:8000/nsmf-steering/v1/steer \
+        -H 'Content-Type: application/json' \
+        -d "{\"supi\":\"$SUPI\",\"targetUpf\":\"$TARGET\"}" 2>&1)
+
+    FARID=$(echo "$RESULT" | grep -i "x-debug-far" | grep -oP 'FARID=\K\d+')
+    echo "Attempt $i: FARID=$FARID"
+
+    # FAR IDs 5 and 7 are the active steering FARs — accept either
+    if [[ "$FARID" == "5" || "$FARID" == "7" ]]; then
+        echo "SUCCESS on attempt $i — steered to $TARGET"
+        exit 0
+    fi
+    sleep 0.1
+done
+echo "Failed after 20 attempts"</code></pre>
         </div>
       </section>
 
@@ -2415,7 +2492,7 @@ ls -la /lib/modules/$(uname -r)/kernel/drivers/net/gtp5g.ko</code></pre>
           <div class="trouble-a">
             The ULCL session was not established. Verify that
             <code>uerouting.yaml</code> <code>specificPath</code> starts with
-            <code>[I-UPF, PSA-UPF2]</code>. Check SMF logs:
+            <code>[I-UPF, PSA-UPF]</code>. Check SMF logs:
             <div class="code-wrap" style="margin-top: 12px">
               <div class="code-bar">
                 <div class="code-dots">
