@@ -1320,7 +1320,8 @@ go build .</code></pre>
         <div class="callout callout-error">
           <span class="callout-icon">&#10005;</span>
           <div class="callout-body"><strong>PSA-UPF2 requires a dummy IP pool</strong>Without a pool (e.g.
-            <code>10.61.0.0/16</code>), <code>ActivateTunnelAndPDR()</code> panics with a nil pointer dereference.</div>
+            <code>10.61.0.0/16</code>), <code>ActivateTunnelAndPDR()</code> panics with a nil pointer dereference.
+          </div>
         </div>
         <div class="callout callout-error">
           <span class="callout-icon">&#10005;</span>
@@ -1330,7 +1331,8 @@ go build .</code></pre>
         <div class="callout callout-warn">
           <span class="callout-icon">&#9888;</span>
           <div class="callout-body"><strong>go-upf does not support N6 in ifList</strong>Only declare N3/N9 in the
-            <code>upfcfg.yaml</code> files. N6 is only used in <code>smfcfg.yaml</code>.</div>
+            <code>upfcfg.yaml</code> files. N6 is only used in <code>smfcfg.yaml</code>.
+          </div>
         </div>
       </section>
 
@@ -1363,7 +1365,8 @@ go build .</code></pre>
         <div class="callout callout-warn">
           <span class="callout-icon">&#9888;</span>
           <div class="callout-body"><strong>specificPath must start with I-UPF</strong>This is required so
-            <code>FindULCL()</code> can identify the branching point and install SDF-filtered PDRs on I-UPF.</div>
+            <code>FindULCL()</code> can identify the branching point and install SDF-filtered PDRs on I-UPF.
+          </div>
         </div>
       </section>
 
@@ -1724,7 +1727,8 @@ sudo ip route add 10.60.0.0/16 via 10.160.101.198 metric 200</code></pre>
         <div class="callout callout-info">
           <span class="callout-icon"></span>
           <div class="callout-body" style="display:ruby;">The SMF binds to <code>127.0.0.2:8000</code>. All
-            <code>curl</code> commands must be run on the <strong>core VM</strong> with <code>sudo</code>.</div>
+            <code>curl</code> commands must be run on the <strong>core VM</strong> with <code>sudo</code>.
+          </div>
         </div>
         <h3>Use steer.sh script</h3>
         <div class="code-wrap">
@@ -2078,7 +2082,8 @@ sudo tshark -i ens18 -f "udp port 2152" -T fields \
         </div>
         <p style="font-size:13px;color:var(--muted);margin-top:8px;">Note the TEID values returned (e.g.
           <code>0x00000001</code>, <code>0x00000002</code>). Update <code>REAL_TEIDS</code> in <code>flood.py</code>
-          accordingly.</p>
+          accordingly.
+        </p>
 
         <h3>Create flood.py</h3>
         <p>Place on the attacker VM at <code>~/scenario_2/flood.py</code>.</p>
@@ -2182,7 +2187,8 @@ echo "[*] Attack complete."</code></pre>
 done</code></pre>
               </div>
               <p style="font-size:13px;color:var(--muted);margin-top:8px;">Expected baseline:
-                <code>~0.003&ndash;0.005s</code> per request. Keep running throughout the entire scenario.</p>
+                <code>~0.003&ndash;0.005s</code> per request. Keep running throughout the entire scenario.
+              </p>
             </div>
           </div>
 
@@ -2258,7 +2264,8 @@ done</code></pre>
               </div>
               <p style="font-size:13px;color:var(--muted);margin-top:8px;">Simultaneously starts
                 <code>stress-ng --cpu 4</code> on I-UPF via SSH and sends 100,000 PPS of crafted GTP-U packets toward
-                I-UPF's N3 interface.</p>
+                I-UPF's N3 interface.
+              </p>
             </div>
           </div>
 
@@ -2448,6 +2455,12 @@ sudo tcpdump -i upfgtp -n -c 10</code></pre>
           <span class="section-rule"></span>
         </div>
         <h2>Scenario 3 &mdash; Intent-Based Self-Healing</h2>
+        <figure class="diagram-figure">
+          <img src="images/scenario3-architecture.png"
+            alt="Scenario 3 architecture: Agent, SMF, AMF, Branch UPF, Anchor UPF 1 and 2, and Data Network Server"
+            class="diagram-img" />
+          <!-- <figcaption>Fig. 1 &mdash; Scenario 3 network topology with ULCL traffic steering</figcaption> -->
+        </figure>
         <p>
           The N9 link between I-UPF and PSA-UPF is subjected to a <em>gray failure</em> &mdash; sustained packet loss
           and delay that degrades user quality without triggering a full link-down event. An autonomous agent running
