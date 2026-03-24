@@ -1045,6 +1045,9 @@
         <a href="#scenario1"><span class="nav-num">13</span> Scenario 1 &mdash; Invisible Redirect</a>
         <a href="#scenario2"><span class="nav-num">14</span> Scenario 2 &mdash; ULCL Exhaustion</a>
         <a href="#scenario3"><span class="nav-num">15</span> Scenario 3 &mdash; Self-Healing Agent</a>
+
+        <div class="nav-chapter">References</div>
+        <a href="#links"><span class="nav-num">16</span> Helpful Links</a>
       </nav>
 
       <!-- <div class="sidebar-foot">
@@ -2955,6 +2958,62 @@ sudo python3 ~/scenario_3/k.py 2>/dev/null</code></pre>
         </div>
 
       </section>
+      <!-- Section 16: Helpful Links -->
+      <section id="links">
+        <div class="section-label">
+          <span class="section-num">&sect; 16</span>
+          <span class="section-rule"></span>
+        </div>
+        <h2>Helpful Links</h2>
+        <p>Reference documentation, configuration guides, and sample configurations used in this implementation.</p>
+        <div class="vm-table-wrap" style="margin-top:20px;">
+          <table class="vm-table">
+            <thead>
+              <tr>
+                <th>Resource</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><a href="https://free5gc.org/guide/#advanced-build-free5gc-from-scratch" target="_blank"
+                    rel="noopener"
+                    style="color:var(--blue);text-decoration:none;font-family:'DM Mono',monospace;font-size:12.5px;">free5GC
+                    User Guide</a></td>
+                <td>Official guide &mdash; building free5GC from scratch</td>
+              </tr>
+              <tr>
+                <td><a href="https://free5gc.org/guide/SMF-Config/#userplane-information" target="_blank" rel="noopener"
+                    style="color:var(--blue);text-decoration:none;font-family:'DM Mono',monospace;font-size:12.5px;">SMF
+                    Config / ULCL</a></td>
+                <td>SMF userplane configuration reference including ULCL settings</td>
+              </tr>
+              <tr>
+                <td><a href="https://github.com/s5uishida/free5gc_ueransim_ulcl_sample_config" target="_blank"
+                    rel="noopener"
+                    style="color:var(--blue);text-decoration:none;font-family:'DM Mono',monospace;font-size:12.5px;">ULCL
+                    Sample Config</a></td>
+                <td>free5GC &amp; UERANSIM sample configuration for ULCL (Uplink Classifier)</td>
+              </tr>
+              <tr>
+                <td><a href="https://github.com/s5uishida/free5gc_ueransim_ulcl_2_sample_config" target="_blank"
+                    rel="noopener"
+                    style="color:var(--blue);text-decoration:none;font-family:'DM Mono',monospace;font-size:12.5px;">ULCL
+                    &mdash; I-UPF + 2 PSA-UPFs</a></td>
+                <td>Sample config for ULCL with one I-UPF and two PSA-UPFs &mdash; the topology used in this guide</td>
+              </tr>
+              <tr>
+                <td><a href="https://github.com/s5uishida/sample_config_misc_for_mobile_network" target="_blank"
+                    rel="noopener"
+                    style="color:var(--blue);text-decoration:none;font-family:'DM Mono',monospace;font-size:12.5px;">Misc
+                    Mobile Network Configs</a></td>
+                <td>Sample configurations and miscellaneous resources for mobile network setups</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
     </main>
   </div>
 
@@ -2982,6 +3041,15 @@ sudo python3 ~/scenario_3/k.py 2>/dev/null</code></pre>
     }, { rootMargin: "-20% 0px -70% 0px" });
 
     sections.forEach((s) => io.observe(s));
+
+    window.addEventListener('scroll', () => {
+      const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 100;
+      if (nearBottom) {
+        links.forEach((a) => a.classList.remove("active"));
+        const last = document.querySelector('aside a[href="#links"]');
+        if (last) last.classList.add("active");
+      }
+    });
   </script>
 </body>
 
