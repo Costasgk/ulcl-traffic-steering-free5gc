@@ -2022,6 +2022,107 @@ sudo ~/go-gtp5gnl/cmd/gogtp5g-tunnel/gogtp5g-tunnel delete far upfgtp 1:99</code
             </div>
           </div>
         </div>
+
+        <h3>Phase 4 &mdash; Observation &amp; Results</h2>
+
+          <div class="callout callout-info">
+            <span class="callout-icon">&#9432;</span>
+            <div class="callout-body">
+              <strong>Key Discovery:</strong> The 5G Control Plane (SMF) has no way to verify if the User Plane (UPF) is
+              actually following its rules. This creates a "trust gap" where traffic can be hijacked silently.
+            </div>
+          </div>
+
+          <div class="vm-table-wrap" style="margin-top:20px;">
+            <table class="vm-table">
+              <thead>
+                <tr>
+                  <th>Measurement</th>
+                  <th>Baseline</th>
+                  <th>During Attack</th>
+                  <th>Recovery</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Traffic Destination</strong></td>
+                  <td>.148 (Authorized)</td>
+                  <td><strong style="color:var(--accent)">.198 (Rogue)</strong></td>
+                  <td>.148</td>
+                </tr>
+                <tr>
+                  <td><strong>Kernel Rules</strong></td>
+                  <td>Standard</td>
+                  <td><strong style="color:var(--accent)">PDR/FAR 99 Added</strong></td>
+                  <td>Clean</td>
+                </tr>
+                <tr>
+                  <td><strong>SMF Awareness</strong></td>
+                  <td>Full Awareness</td>
+                  <td><strong style="color:var(--accent)">None (Blind)</strong></td>
+                  <td>Full Awareness</td>
+                </tr>
+                <tr>
+                  <td><strong>RTT (Latency)</strong></td>
+                  <td>1.390 ms</td>
+                  <td>1.399 ms</td>
+                  <td>~1.390 ms</td>
+                </tr>
+                <tr>
+                  <td><strong>Packet Loss</strong></td>
+                  <td>0%</td>
+                  <td>0%</td>
+                  <td>0%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+
+
+          <h3>What We Learned</h3>
+          <div class="checklist">
+            <div class="check-row">
+              <div class="check-mark">&#10003;</div>
+              <div class="check-label">
+                <strong>The "Blind" Control Plane</strong>
+                The SMF sends rules but never double-checks the kernel. If an attacker injects a rule directly into the
+                UPF, the SMF remains "blind" to the change.
+              </div>
+            </div>
+            <div class="check-row">
+              <div class="check-mark">&#10003;</div>
+              <div class="check-label">
+                <strong>Zero Footprint</strong>
+                The attack is silent. Because latency and packet loss barely changed (only a 0.009ms delta), standard
+                monitoring tools would not trigger an alarm.
+              </div>
+            </div>
+            <div class="check-row">
+              <div class="check-mark">&#10003;</div>
+              <div class="check-label">
+                <strong>Control/User Plane Decoupling</strong>
+                The "brain" (SMF) thought traffic was on the legal path, while the "hands" (UPF) delivered it to a rogue
+                server. Both stayed active without any system conflict.
+              </div>
+            </div>
+            <div class="check-row">
+              <div class="check-mark">&#10003;</div>
+              <div class="check-label">
+                <strong>The Latency Signature</strong>
+                In real-world networks with physical distance, a sudden shift in RTT is the only "fingerprint" this
+                attack leaves behind.
+              </div>
+            </div>
+            <div class="check-row">
+              <div class="check-mark">&#10003;</div>
+              <div class="check-label">
+                <strong>Instant Recovery</strong>
+                Since the SMF's memory wasn't corrupted, simply deleting the rogue kernel rules restores the authorized
+                path without needing to reset the user's connection.
+              </div>
+            </div>
+          </div>
       </section>
 
       <!-- Section 14: Scenario 2 -->
