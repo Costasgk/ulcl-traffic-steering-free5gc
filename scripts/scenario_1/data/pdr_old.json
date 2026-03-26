@@ -1,0 +1,315 @@
+[
+  {
+    "ID": 3,
+    "Precedence": 128,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": {
+        "TEID": 2,
+        "GTPuAddr": "10.160.101.143"
+      },
+      "SDF": null,
+      "EPFs": null
+    },
+    "OuterHdrRemoval": 0,
+    "FARID": 3,
+    "QERID": [
+      1,
+      3
+    ],
+    "URRID": [
+      1,
+      2,
+      8,
+      7
+    ],
+    "SEID": 1,
+    "PDNType": null
+  },
+  {
+    "ID": 10,
+    "Precedence": 255,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": null,
+      "SDF": null,
+      "EPFs": null
+    },
+    "OuterHdrRemoval": null,
+    "FARID": 10,
+    "QERID": [
+      1
+    ],
+    "URRID": [
+      1,
+      2,
+      7
+    ],
+    "SEID": 1,
+    "PDNType": null
+  },
+  {
+    "ID": 1,
+    "Precedence": 255,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": {
+        "TEID": 2,
+        "GTPuAddr": "10.160.101.143"
+      },
+      "SDF": null,
+      "EPFs": null
+    },
+    "OuterHdrRemoval": 0,
+    "FARID": 1,
+    "QERID": [
+      2,
+      1
+    ],
+    "URRID": [
+      1,
+      2,
+      7
+    ],
+    "SEID": 1,
+    "PDNType": null
+  },
+  {
+    "ID": 6,
+    "Precedence": 255,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": {
+        "TEID": 1,
+        "GTPuAddr": "10.160.101.143"
+      },
+      "SDF": null,
+      "EPFs": null
+    },
+    "OuterHdrRemoval": 0,
+    "FARID": 6,
+    "QERID": [
+      1
+    ],
+    "URRID": [
+      5,
+      6
+    ],
+    "SEID": 1,
+    "PDNType": null
+  },
+  {
+    "ID": 8,
+    "Precedence": 255,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": {
+        "TEID": 1,
+        "GTPuAddr": "10.160.101.143"
+      },
+      "SDF": null,
+      "EPFs": null
+    },
+    "OuterHdrRemoval": 0,
+    "FARID": 8,
+    "QERID": [
+      1
+    ],
+    "URRID": [
+      5,
+      6
+    ],
+    "SEID": 1,
+    "PDNType": null
+  },
+  {
+    "ID": 9,
+    "Precedence": 30,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": {
+        "TEID": 2,
+        "GTPuAddr": "10.160.101.143"
+      },
+      "SDF": {
+        "FD": {
+          "Action": 1,
+          "Dir": 2,
+          "Proto": 255,
+          "Src": {
+            "IP": "10.60.0.1",
+            "Mask": null
+          },
+          "Dst": {
+            "IP": "8.8.8.8",
+            "Mask": null
+          },
+          "SrcPorts": null,
+          "DstPorts": null
+        },
+        "TTC": null,
+        "SPI": null,
+        "FL": null,
+        "BID": null
+      },
+      "EPFs": null
+    },
+    "OuterHdrRemoval": 0,
+    "FARID": 9,
+    "QERID": [
+      1
+    ],
+    "URRID": [
+      1,
+      2,
+      7
+    ],
+    "SEID": 1,
+    "PDNType": null
+  },
+  {
+    "ID": 2,
+    "Precedence": 255,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": null,
+      "SDF": null,
+      "EPFs": null
+    },
+    "OuterHdrRemoval": null,
+    "FARID": 2,
+    "QERID": [
+      2,
+      1
+    ],
+    "URRID": [
+      1,
+      2,
+      7
+    ],
+    "SEID": 1,
+    "PDNType": null
+  },
+  {
+    "ID": 5,
+    "Precedence": 30,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": {
+        "TEID": 2,
+        "GTPuAddr": "10.160.101.143"
+      },
+      "SDF": {
+        "FD": {
+          "Action": 1,
+          "Dir": 2,
+          "Proto": 255,
+          "Src": {
+            "IP": "10.60.0.1",
+            "Mask": null
+          },
+          "Dst": {
+            "IP": "10.160.101.145",
+            "Mask": null
+          },
+          "SrcPorts": null,
+          "DstPorts": null
+        },
+        "TTC": null,
+        "SPI": null,
+        "FL": null,
+        "BID": null
+      },
+      "EPFs": null
+    },
+    "OuterHdrRemoval": 0,
+    "FARID": 5,
+    "QERID": [
+      1
+    ],
+    "URRID": [
+      5,
+      6
+    ],
+    "SEID": 1,
+    "PDNType": null
+  },
+  {
+    "ID": 4,
+    "Precedence": 128,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": null,
+      "SDF": null,
+      "EPFs": null
+    },
+    "OuterHdrRemoval": null,
+    "FARID": 4,
+    "QERID": [
+      1,
+      3
+    ],
+    "URRID": [
+      1,
+      2,
+      8,
+      7
+    ],
+    "SEID": 1,
+    "PDNType": null
+  },
+  {
+    "ID": 7,
+    "Precedence": 30,
+    "PDI": {
+      "SrcIntf": null,
+      "UEAddr": "10.60.0.1",
+      "FTEID": {
+        "TEID": 2,
+        "GTPuAddr": "10.160.101.143"
+      },
+      "SDF": {
+        "FD": {
+          "Action": 1,
+          "Dir": 2,
+          "Proto": 255,
+          "Src": {
+            "IP": "10.60.0.1",
+            "Mask": null
+          },
+          "Dst": {
+            "IP": "10.160.101.145",
+            "Mask": null
+          },
+          "SrcPorts": null,
+          "DstPorts": null
+        },
+        "TTC": null,
+        "SPI": null,
+        "FL": null,
+        "BID": null
+      },
+      "EPFs": null
+    },
+    "OuterHdrRemoval": 0,
+    "FARID": 7,
+    "QERID": [
+      1
+    ],
+    "URRID": [
+      5,
+      6
+    ],
+    "SEID": 1,
+    "PDNType": null
+  }
+]

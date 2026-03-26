@@ -1,0 +1,166 @@
+[
+  {
+    "ID": 3,
+    "Action": 2,
+    "Param": null,
+    "PDRIDs": [
+      3
+    ],
+    "BARID": null,
+    "SEID": 1
+  },
+  {
+    "ID": 10,
+    "Action": 2,
+    "Param": {
+      "Creation": {
+        "Desc": 256,
+        "TEID": 1,
+        "PeerAddr": "10.160.101.120",
+        "Port": 2152
+      },
+      "Policy": null,
+      "TosTc": 0
+    },
+    "PDRIDs": [
+      10
+    ],
+    "BARID": null,
+    "SEID": 1
+  },
+  {
+    "ID": 1,
+    "Action": 2,
+    "Param": null,
+    "PDRIDs": [
+      1
+    ],
+    "BARID": null,
+    "SEID": 1
+  },
+  {
+    "ID": 6,
+    "Action": 2,
+    "Param": {
+      "Creation": {
+        "Desc": 256,
+        "TEID": 1,
+        "PeerAddr": "10.160.101.120",
+        "Port": 2152
+      },
+      "Policy": null,
+      "TosTc": 0
+    },
+    "PDRIDs": [
+      6
+    ],
+    "BARID": null,
+    "SEID": 1
+  },
+  {
+    "ID": 8,
+    "Action": 2,
+    "Param": {
+      "Creation": {
+        "Desc": 256,
+        "TEID": 1,
+        "PeerAddr": "10.160.101.120",
+        "Port": 2152
+      },
+      "Policy": null,
+      "TosTc": 0
+    },
+    "PDRIDs": [
+      8
+    ],
+    "BARID": null,
+    "SEID": 1
+  },
+  {
+    "ID": 9,
+    "Action": 2,
+    "Param": null,
+    "PDRIDs": [
+      9
+    ],
+    "BARID": null,
+    "SEID": 1
+  },
+  {
+    "ID": 2,
+    "Action": 2,
+    "Param": {
+      "Creation": {
+        "Desc": 256,
+        "TEID": 1,
+        "PeerAddr": "10.160.101.120",
+        "Port": 2152
+      },
+      "Policy": null,
+      "TosTc": 0
+    },
+    "PDRIDs": [
+      2
+    ],
+    "BARID": null,
+    "SEID": 1
+  },
+  {
+    "ID": 5,
+    "Action": 2,
+    "Param": {
+      "Creation": {
+        "Desc": 256,
+        "TEID": 2,
+        "PeerAddr": "10.160.101.148",
+        "Port": 2152
+      },
+      "Policy": null,
+      "TosTc": 0
+    },
+    "PDRIDs": [
+      5
+    ],
+    "BARID": null,
+    "SEID": 1
+  },
+  {
+    "ID": 4,
+    "Action": 2,
+    "Param": {
+      "Creation": {
+        "Desc": 256,
+        "TEID": 1,
+        "PeerAddr": "10.160.101.120",
+        "Port": 2152
+      },
+      "Policy": null,
+      "TosTc": 0
+    },
+    "PDRIDs": [
+      4
+    ],
+    "BARID": null,
+    "SEID": 1
+  },
+  {
+    "ID": 7,
+    "Action": 2,
+    "Param": {
+      "Creation": {
+        "Desc": 256,
+        "TEID": 2,
+        "PeerAddr": "10.160.101.148",
+        "Port": 2152
+      },
+      "Policy": null,
+      "TosTc": 0
+    },
+    "PDRIDs": [
+      7
+    ],
+    "BARID": null,
+    "SEID": 1
+  }
+]
+

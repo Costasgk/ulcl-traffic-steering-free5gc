@@ -1,0 +1,10 @@
+python3 measurement.py \
+  --baseline-far  data/baseline_far.json \
+  --baseline-pdr  data/baseline_pdr.json \
+  --attack-far    data/attack_far.json \
+  --attack-pdr    data/attack_pdr.json \
+  --recovery-far  data/recovery_far.json \
+  --recovery-pdr  data/recovery_pdr.json \
+  --ping-baseline data/ping_baseline.txt \
+  --ping-attack   data/ping_attack.txt \
+  --ping-recovery data/ping_recovery.txt
