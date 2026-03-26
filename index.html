@@ -1253,76 +1253,162 @@ go build .</code></pre>
         <div class="code-wrap">
           <div class="code-bar">
             <div class="code-dots"><span></span><span></span><span></span></div>
-            <div class="code-meta"><span class="code-lang">yaml</span><span class="code-file">config/smfcfg.yaml &mdash;
-                userplaneInformation</span></div>
+            <div class="code-meta"><span class="code-lang">yaml</span><span class="code-file">config/smfcfg.yaml</span></div>
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
           </div>
-          <pre><code>userplaneInformation:
-  upNodes:
-    gNB1:
-      type: AN
+          <pre><code>info:
+  version: 1.0.7
+  description: SMF initial local configuration
 
-    I-UPF:
-      type: UPF
-      nodeID: 10.160.101.143
-      addr: 10.160.101.143
-      snssaiUpfInfos:
-        - sNssai: {sst: 1, sd: "010203"}
-          dnnUpfInfoList:
-            - dnn: internet
-              <span class="s-comment"># NO pools -- I-UPF is a branching node only</span>
-      interfaces:
-        - interfaceType: N3
-          endpoints: [10.160.101.143]
-          networkInstances: [internet]
-        - interfaceType: N9
-          endpoints: [10.160.101.143]
-          networkInstances: [internet]
+configuration:
+  smfName: SMF 
 
-    PSA-UPF:
-      type: UPF
-      nodeID: 10.160.101.148
-      addr: 10.160.101.148
-      snssaiUpfInfos:
-        - sNssai: {sst: 1, sd: "010203"}
-          dnnUpfInfoList:
-            - dnn: internet
-              pools:
-                - cidr: 10.60.0.0/16
-              staticPools:
-                - cidr: 10.60.100.0/24
-      interfaces:
-        - interfaceType: N9
-          endpoints: [10.160.101.148]
-          networkInstances: [internet]
-        - interfaceType: N6
-          endpoints: [10.160.101.148]
-          networkInstances: [internet]
+  sbi:
+    scheme: http 
+    registerIPv4: 127.0.0.2 
+    bindingIPv4: 127.0.0.2 
+    port: 8000 
+    tls: 
+      key: cert/smf.key 
+      pem: cert/smf.pem 
 
-    PSA-UPF2:
-      type: UPF
-      nodeID: 10.160.101.198
-      addr: 10.160.101.198
-      snssaiUpfInfos:
-        - sNssai: {sst: 1, sd: "010203"}
-          dnnUpfInfoList:
-            - dnn: internet
-              pools:
-                - cidr: 10.61.0.0/16   <span class="s-comment"># dummy pool -- required</span>
-      interfaces:
-        - interfaceType: N9
-          endpoints: [10.160.101.198]
-          networkInstances: [internet]
-        - interfaceType: N6
-          endpoints: [10.160.101.198]
-          networkInstances: [internet]
+  serviceNameList:
+    - nsmf-pdusession 
+    - nsmf-event-exposure 
+    - nsmf-oam 
 
-  links:
-    - A: gNB1   B: I-UPF
-    - A: I-UPF  B: PSA-UPF
-    - A: I-UPF  B: PSA-UPF2   <span class="s-comment"># second branch for ULCL</span>
+  snssaiInfos:
+    - sNssai: 
+        sst: 1 
+        sd: 010203 
+      dnnInfos: 
+        - dnn: internet 
+          dns: 
+            ipv4: 8.8.8.8
+            ipv6: 2001:4860:4860::8888
 
-  ulcl: true  <span class="s-comment"># MUST be enabled</span></code></pre>
+  plmnList:
+    - mcc: 208 
+      mnc: 93 
+  locality: area1 
+
+  pfcp:
+    nodeID: 10.160.101.137 
+    listenAddr: 10.160.101.137 
+    externalAddr: 10.160.101.137 
+    assocFailAlertInterval: 10s
+    assocFailRetryInterval: 30s
+    heartbeatInterval: 10s
+
+  userplaneInformation:
+    upNodes: 
+      gNB1: 
+        type: AN 
+
+      I-UPF: 
+        type: UPF 
+        nodeID: 10.160.101.143 
+        addr: 10.160.101.143 
+        sNssaiUpfInfos: 
+          - sNssai: 
+              sst: 1 
+              sd: 010203 
+            dnnUpfInfoList: 
+              - dnn: internet
+                <span class="s-comment"># NO pools -- I-UPF is a branching node only</span>
+        interfaces: 
+          - interfaceType: N3 
+            endpoints: 
+              - 10.160.101.143
+            networkInstances: 
+              - internet
+          - interfaceType: N9
+            endpoints:
+              - 10.160.101.143
+            networkInstances:
+              - internet
+
+      PSA-UPF:
+        type: UPF
+        nodeID: 10.160.101.148
+        addr: 10.160.101.148
+        sNssaiUpfInfos:
+          - sNssai:
+              sst: 1
+              sd: 010203
+            dnnUpfInfoList:
+              - dnn: internet
+                pools:
+                  - cidr: 10.60.0.0/16
+                staticPools:
+                  - cidr: 10.60.100.0/24
+        interfaces:
+          - interfaceType: N9
+            endpoints:
+              - 10.160.101.148
+            networkInstances:
+              - internet
+          - interfaceType: N6
+            endpoints:
+              - 10.160.101.148
+            networkInstances:
+              - internet
+
+      PSA-UPF2:
+        type: UPF
+        nodeID: 10.160.101.198
+        addr: 10.160.101.198
+        sNssaiUpfInfos:
+          - sNssai:
+              sst: 1
+              sd: 010203
+            dnnUpfInfoList:
+              - dnn: internet
+                pools:
+                  - cidr: 10.61.0.0/16 <span class="s-comment"># dummy pool -- required</span>
+        interfaces:
+          - interfaceType: N9
+            endpoints:
+              - 10.160.101.198
+            networkInstances:
+              - internet
+          - interfaceType: N6
+            endpoints:
+              - 10.160.101.198
+            networkInstances:
+              - internet
+
+    links:
+      - A: gNB1
+        B: I-UPF
+      - A: I-UPF
+        B: PSA-UPF
+      - A: I-UPF
+        B: PSA-UPF2 <span class="s-comment"># second branch for ULCL</span>
+
+  ulcl: true
+
+  t3591:
+    enable: true
+    expireTime: 16s
+    maxRetryTimes: 3
+
+  t3592:
+    enable: true
+    expireTime: 16s
+    maxRetryTimes: 3
+
+  nrfUri: http://127.0.0.10:8000
+  nrfCertPem: cert/nrf.pem
+  urrPeriod: 30
+  urrThreshold: 500000
+  requestedUnit: 1000
+
+logger:
+  enable: true
+  level: debug
+  reportCaller: true
+</code></pre>
         </div>
         <div class="callout callout-error">
           <span class="callout-icon">&#10005;</span>
