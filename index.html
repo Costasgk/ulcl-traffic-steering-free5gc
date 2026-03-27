@@ -1238,14 +1238,16 @@ go build .</code></pre>
           Key points:</p>
         <div class="callout callout-error"><span class="callout-icon">&#10005;</span>
           <div class="callout-body"><strong>PSA-UPF2 requires a dummy IP pool</strong>Without a pool (e.g.
-            <code>10.61.0.0/16</code>), <code>ActivateTunnelAndPDR()</code> panics.</div>
+            <code>10.61.0.0/16</code>), <code>ActivateTunnelAndPDR()</code> panics.
+          </div>
         </div>
         <div class="callout callout-error"><span class="callout-icon">&#10005;</span>
           <div class="callout-body"><strong>I-UPF must have no pools</strong>It is a branching node only.</div>
         </div>
         <div class="callout callout-warn"><span class="callout-icon">&#9888;</span>
           <div class="callout-body"><strong>go-upf does not support N6 in ifList</strong>Only declare N3/N9 in
-            <code>upfcfg.yaml</code>. N6 is only used in <code>smfcfg.yaml</code>.</div>
+            <code>upfcfg.yaml</code>. N6 is only used in <code>smfcfg.yaml</code>.
+          </div>
         </div>
       </section>
 
@@ -1279,7 +1281,8 @@ go build .</code></pre>
         </div>
         <div class="callout callout-warn"><span class="callout-icon">&#9888;</span>
           <div class="callout-body"><strong>specificPath must start with I-UPF</strong>Required so
-            <code>FindULCL()</code> identifies the branching point.</div>
+            <code>FindULCL()</code> identifies the branching point.
+          </div>
         </div>
       </section>
 
@@ -1563,7 +1566,8 @@ sudo ip route add 10.60.0.0/16 via 10.160.101.198 metric 200</code></pre>
         <h2>Using the Dynamic Steering API</h2>
         <div class="callout callout-info"><span class="callout-icon"></span>
           <div class="callout-body" style="display:ruby;">The SMF binds to <code>127.0.0.2:8000</code>. All
-            <code>curl</code> commands must be run on the <strong>core VM</strong> with <code>sudo</code>.</div>
+            <code>curl</code> commands must be run on the <strong>core VM</strong> with <code>sudo</code>.
+          </div>
         </div>
         <h3>Use steer.sh script</h3>
         <div class="code-wrap">
@@ -2053,7 +2057,8 @@ done</code></pre>
           <div class="callout-body"><strong>Prerequisites</strong>Testbed fully running with UE connected. Passwordless
             SSH from free5gc-core (as root) to both <code>i-upf</code> and <code>ueransim-ue</code> must be configured.
             Confirm <code>sudo ssh localadmin@10.160.101.143 echo OK</code> and
-            <code>sudo ssh localadmin@10.160.101.121 echo OK</code> succeed without a password prompt.</div>
+            <code>sudo ssh localadmin@10.160.101.121 echo OK</code> succeed without a password prompt.
+          </div>
         </div>
 
         <h3>Architecture &mdash; How It Works</h3>
@@ -2341,7 +2346,8 @@ PHASE 3 — Recovery   loss=0.0%   RTT=1.5ms  MOS=4.41  Excellent</code></pre>
         <h3>Video Stream Variant &mdash; Full Runbook</h3>
         <p>For a more realistic QoE measurement, replace the ICMP ping with an FFmpeg RTP video stream. This variant
           captures actual video packet loss across the three phases and analyses it with
-          <code>measurement_stream.py</code>.</p>
+          <code>measurement_stream.py</code>.
+        </p>
 
         <div class="callout callout-info"><span class="callout-icon">&#9432;</span>
           <div class="callout-body"><strong>Prerequisites for video stream variant</strong>Install FFmpeg on ueransim-ue
@@ -2490,8 +2496,9 @@ PHASE 3 — Recovery   loss=0.0%   RTT=1.5ms  MOS=4.41  Excellent</code></pre>
                 </div>
                 <!--<span class="s-comment"># Add 15ms baseline delay first</span>
 sudo tc qdisc add dev ens18 root netem delay 15ms-->
-<!--<span class="s-comment"># Wait 10s, then inject gray failure (loss + delay)</span>-->
-<!--sleep 10 && \ --><pre><code>sudo tc qdisc add dev ens18 root netem delay 15ms loss 20% && \
+                <!--<span class="s-comment"># Wait 10s, then inject gray failure (loss + delay)</span>-->
+                <!--sleep 10 && \ -->
+                <pre><code>sudo tc qdisc add dev ens18 root netem delay 15ms loss 20% && \
 echo "FAILURE_START: $(date '+%H:%M:%S.%3N')"</code></pre>
               </div>
               <p style="font-size:13px;color:var(--muted);margin-top:8px;">The 20% packet loss combined with 15ms delay
@@ -2527,7 +2534,7 @@ Time to heal: 0.2s  Total convergence: 5.6s</code></pre>
                   <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">i-upf</span></div>
                   <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div> -->
-                <!-- <pre><code>sudo tc qdisc change dev ens18 root netem delay 15ms && \
+              <!-- <pre><code>sudo tc qdisc change dev ens18 root netem delay 15ms && \
 echo "FAILURE_END: $(date '+%H:%M:%S.%3N')"</code></pre>
               </div> -->
             </div>
@@ -2679,6 +2686,7 @@ Estimated MOS    : 3.50</code></pre>
           </table>
         </div>
 
+
         <div class="callout callout-info" style="margin-top:16px;"><span class="callout-icon">&#9432;</span>
           <div class="callout-body"><strong>Video stream vs ICMP ping</strong>The video stream variant shows a sharper
             MOS drop during the gray failure phase (2.00 vs 2.45 from ICMP) because RTP packet loss causes visible frame
@@ -2694,7 +2702,96 @@ Estimated MOS    : 3.50</code></pre>
             <!-- instantly, with zero packet loss in the recovery phase. This directly addresses the architectural bottleneck
             exposed in Scenario 2 through autonomous, intent-based remediation &mdash; aligned with the NetSoft 2026
             theme of Autonomous Networks.</div> -->
+          </div>
         </div>
+        <p>Timeline showing the process of the agent:</p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">expected output &mdash;
+                agent.py</span></div><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>2026-03-27 10:35:18,548 Agent started — monitoring N9: 10.160.101.143 -> 10.160.101.148
+2026-03-27 10:35:20,893 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-03-27 10:35:25,217 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-03-27 10:35:29,553 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-03-27 10:35:33,909 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-03-27 10:35:38,245 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-03-27 10:35:42,573 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-03-27 10:35:46,917 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-03-27 10:35:53,284 N9 loss=10.00%  sent=10  received=9  lost=1  seqs=1-10
+2026-03-27 10:35:53,284 GRAY FAILURE detected! loss=10.0%
+2026-03-27 10:35:59,341 N9 loss=20.00%  sent=10  received=8  lost=2  seqs=2-10
+2026-03-27 10:35:59,341 Confirmed — healing now!
+2026-03-27 10:36:02,369   Steer attempt 1: FARID=5
+2026-03-27 10:36:02,495   Steer attempt 2: FARID=7
+2026-03-27 10:36:02,495 SUCCESS — steered to 10.160.101.198
+2026-03-27 10:36:02,495 ==================================================
+2026-03-27 10:36:02,495 CONVERGENCE METRICS
+2026-03-27 10:36:02,496   Time to heal            : 3.2s
+2026-03-27 10:36:02,496   Total convergence       : 9.2s
+2026-03-27 10:36:02,496 ==================================================
+2026-03-27 10:36:02,496 PACKET LOSS SUMMARY
+2026-03-27 10:36:02,496   First loss detected     : 10:35:53
+2026-03-27 10:36:02,496   Last loss detected      : 10:35:59
+2026-03-27 10:36:02,496 =================================================</code></pre>
+        </div>
+          <div class="log-analysis-wrap" style="font-family: sans-serif; line-height: 1.6;">
+            <div class="vm-table-wrap">
+              <table class="vm-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead>
+                  <tr style="background: var(--paper2); border-bottom: 2px solid var(--border);">
+                    <th style="padding: 12px; text-align: left;">Timestamp</th>
+                    <th style="padding: 12px; text-align: left;">Network State</th>
+                    <th style="padding: 12px; text-align: left;">Event / Action</th>
+                    <th style="padding: 12px; text-align: center;">Loss %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:35:18</td>
+                    <td style="color: var(--green); font-weight: 600;">Steady State</td>
+                    <td>Monitoring started (I-UPF &rarr; PSA-UPF)</td>
+                    <td style="text-align: center;">0.0%</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:35:53</td>
+                    <td style="color: var(--gold); font-weight: 600;">Detection</td>
+                    <td><strong>Gray Failure Detected</strong>: First dropped packet seen</td>
+                    <td style="text-align: center;">10.0%</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:35:59</td>
+                    <td style="color: var(--accent); font-weight: 600;">Confirmation</td>
+                    <td>Failure persists; Agent triggers <strong>Healing Logic</strong></td>
+                    <td style="text-align: center;">20.0%</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:36:02</td>
+                    <td style="color: #5d5dff; font-weight: 600;">Steering</td>
+                    <td>Successful path steering</td>
+                    <td style="text-align: center;">—</td>
+                  </tr>
+                  <tr style="background: var(--paper2); font-weight: bold;">
+                    <td colspan="2" style="padding: 12px;">Final Outcome</td>
+                    <td>Total System Convergence achieved in <strong>9.2 seconds</strong></td>
+                    <td style="text-align: center; color: var(--green);">Healed</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="callout callout-info">
+              <span class="callout-icon">&#9432;</span>
+              <div class="callout-body">
+                <strong>Event Explanation:</strong> This array illustrates the <strong>Closed-Loop Control</strong>
+                cycle. The agent spends the first 35 seconds confirming network health. At 10:35:53, the "Gray Failure"
+                threshold is breached. To avoid "flapping" (false positives), the agent waits for a second confirmation
+                cycle (approx. 6 seconds) before successfully invoking the SMF REST API to shift traffic to the backup
+                PSA-UPF2.
+              </div>
+            </div>
+          </div>
       </section>
 
       <!-- Section 16: Helpful Links -->
