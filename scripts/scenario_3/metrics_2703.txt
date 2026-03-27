@@ -1,0 +1,48 @@
+Metrics with:
+
+sudo tc qdisc add dev ens18 root netem delay 15ms loss 20% && \
+> echo "FAILURE_START: $(date '+%H:%M:%S.%3N')"
+FAILURE_START: 08:50:24.229
+
+
+Reading PCAP: stream.pcap
+
+==================================================
+Packets Measurement Results with Phases
+==================================================
+
+==================================================
+PHASE 1 — Baseline (before failure)
+==================================================
+Packets received : 3420
+Packets lost     : 4
+Packet loss      : 0.12%
+Average inter-arrival: 31.17 ms
+Estimated MOS    : 4.50
+
+==================================================
+PHASE 2 — Gray Failure
+==================================================
+Packets received : 60
+Packets lost     : 17
+Packet loss      : 22.08%
+Average inter-arrival: 34.15 ms
+Estimated MOS    : 2.00
+
+==================================================
+PHASE 3 — Recovery (after healing)
+==================================================
+Packets received : 1919
+Packets lost     : 284
+Packet loss      : 12.89%
+Average inter-arrival: 35.98 ms
+Estimated MOS    : 3.00
+
+==================================================
+OVERALL
+==================================================
+Packets received : 5399
+Packets lost     : 305
+Packet loss      : 5.35%
+Average inter-arrival: 32.92 ms
+Estimated MOS    : 3.50
