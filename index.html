@@ -2494,11 +2494,12 @@ PHASE 3 — Recovery   loss=0.0%   RTT=1.5ms  MOS=4.41  Excellent</code></pre>
                   <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
                     onclick="copyCode(this)">Copy</button>
                 </div>
-                <!--<span class="s-comment"># Add 15ms baseline delay first</span>
-sudo tc qdisc add dev ens18 root netem delay 15ms-->
-                <!--<span class="s-comment"># Wait 10s, then inject gray failure (loss + delay)</span>-->
-                <!--sleep 10 && \ -->
-                <pre><code>sudo tc qdisc add dev ens18 root netem delay 15ms loss 20% && \
+                <pre><code><span class="s-comment"># Add 15ms baseline delay first</span>
+sudo tc qdisc add dev ens18 root netem delay 15ms
+
+<span class="s-comment"># Wait 10s, then inject gray failure (loss + delay)</span>
+sleep 10 && \
+sudo tc qdisc add dev ens18 root netem delay 15ms loss 20% && \
 echo "FAILURE_START: $(date '+%H:%M:%S.%3N')"</code></pre>
               </div>
               <p style="font-size:13px;color:var(--muted);margin-top:8px;">The 20% packet loss combined with 15ms delay
@@ -2526,17 +2527,17 @@ echo "FAILURE_START: $(date '+%H:%M:%S.%3N')"</code></pre>
 SUCCESS — steered to 10.160.101.198
 Time to heal: 0.2s  Total convergence: 5.6s</code></pre>
               </div>
-              <!-- <p style="font-size:13px;color:var(--muted);margin-top:8px;">Once <code>SUCCESS</code> appears,
-                immediately remove the packet loss but keep the delay on i-upf:</p> -->
-              <!-- <div class="code-wrap">
+              <p style="font-size:13px;color:var(--muted);margin-top:8px;">Once <code>SUCCESS</code> appears,
+                immediately remove the packet loss but keep the delay on i-upf:</p>
+              <div class="code-wrap">
                 <div class="code-bar">
                   <div class="code-dots"><span></span><span></span><span></span></div>
                   <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">i-upf</span></div>
                   <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                </div> -->
-              <!-- <pre><code>sudo tc qdisc change dev ens18 root netem delay 15ms && \
+                </div>
+                <pre><code>sudo tc qdisc change dev ens18 root netem delay 15ms && \
 echo "FAILURE_END: $(date '+%H:%M:%S.%3N')"</code></pre>
-              </div> -->
+              </div>
             </div>
           </div>
 
@@ -2736,62 +2737,62 @@ Estimated MOS    : 3.50</code></pre>
 2026-03-27 10:36:02,496   Last loss detected      : 10:35:59
 2026-03-27 10:36:02,496 =================================================</code></pre>
         </div>
-          <div class="log-analysis-wrap" style="font-family: sans-serif; line-height: 1.6;">
-            <div class="vm-table-wrap">
-              <table class="vm-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                <thead>
-                  <tr style="background: var(--paper2); border-bottom: 2px solid var(--border);">
-                    <th style="padding: 12px; text-align: left;">Timestamp</th>
-                    <th style="padding: 12px; text-align: left;">Network State</th>
-                    <th style="padding: 12px; text-align: left;">Event / Action</th>
-                    <th style="padding: 12px; text-align: center;">Loss %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:35:18</td>
-                    <td style="color: var(--green); font-weight: 600;">Steady State</td>
-                    <td>Monitoring started (I-UPF &rarr; PSA-UPF)</td>
-                    <td style="text-align: center;">0.0%</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:35:53</td>
-                    <td style="color: var(--gold); font-weight: 600;">Detection</td>
-                    <td><strong>Gray Failure Detected</strong>: First dropped packet seen</td>
-                    <td style="text-align: center;">10.0%</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:35:59</td>
-                    <td style="color: var(--accent); font-weight: 600;">Confirmation</td>
-                    <td>Failure persists; Agent triggers <strong>Healing Logic</strong></td>
-                    <td style="text-align: center;">20.0%</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:36:02</td>
-                    <td style="color: #5d5dff; font-weight: 600;">Steering</td>
-                    <td>Successful path steering</td>
-                    <td style="text-align: center;">—</td>
-                  </tr>
-                  <tr style="background: var(--paper2); font-weight: bold;">
-                    <td colspan="2" style="padding: 12px;">Final Outcome</td>
-                    <td>Total System Convergence achieved in <strong>9.2 seconds</strong></td>
-                    <td style="text-align: center; color: var(--green);">Healed</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        <div class="log-analysis-wrap" style="font-family: sans-serif; line-height: 1.6;">
+          <div class="vm-table-wrap">
+            <table class="vm-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <thead>
+                <tr style="background: var(--paper2); border-bottom: 2px solid var(--border);">
+                  <th style="padding: 12px; text-align: left;">Timestamp</th>
+                  <th style="padding: 12px; text-align: left;">Network State</th>
+                  <th style="padding: 12px; text-align: left;">Event / Action</th>
+                  <th style="padding: 12px; text-align: center;">Loss %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:35:18</td>
+                  <td style="color: var(--green); font-weight: 600;">Steady State</td>
+                  <td>Monitoring started (I-UPF &rarr; PSA-UPF)</td>
+                  <td style="text-align: center;">0.0%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:35:53</td>
+                  <td style="color: var(--gold); font-weight: 600;">Detection</td>
+                  <td><strong>Gray Failure Detected</strong>: First dropped packet seen</td>
+                  <td style="text-align: center;">10.0%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:35:59</td>
+                  <td style="color: var(--accent); font-weight: 600;">Confirmation</td>
+                  <td>Failure persists; Agent triggers <strong>Healing Logic</strong></td>
+                  <td style="text-align: center;">20.0%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border-bottom: 1px solid var(--border);">10:36:02</td>
+                  <td style="color: #5d5dff; font-weight: 600;">Steering</td>
+                  <td>Successful path steering</td>
+                  <td style="text-align: center;">—</td>
+                </tr>
+                <tr style="background: var(--paper2); font-weight: bold;">
+                  <td colspan="2" style="padding: 12px;">Final Outcome</td>
+                  <td>Total System Convergence achieved in <strong>9.2 seconds</strong></td>
+                  <td style="text-align: center; color: var(--green);">Healed</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-            <div class="callout callout-info">
-              <span class="callout-icon">&#9432;</span>
-              <div class="callout-body">
-                <strong>Event Explanation:</strong> This array illustrates the <strong>Closed-Loop Control</strong>
-                cycle. The agent spends the first 35 seconds confirming network health. At 10:35:53, the "Gray Failure"
-                threshold is breached. To avoid "flapping" (false positives), the agent waits for a second confirmation
-                cycle (approx. 6 seconds) before successfully invoking the SMF REST API to shift traffic to the backup
-                PSA-UPF2.
-              </div>
+          <div class="callout callout-info">
+            <span class="callout-icon">&#9432;</span>
+            <div class="callout-body">
+              <strong>Event Explanation:</strong> This array illustrates the <strong>Closed-Loop Control</strong>
+              cycle. The agent spends the first 35 seconds confirming network health. At 10:35:53, the "Gray Failure"
+              threshold is breached. To avoid "flapping" (false positives), the agent waits for a second confirmation
+              cycle (approx. 6 seconds) before successfully invoking the SMF REST API to shift traffic to the backup
+              PSA-UPF2.
             </div>
           </div>
+        </div>
       </section>
 
       <!-- Section 16: Helpful Links -->

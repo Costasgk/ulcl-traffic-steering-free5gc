@@ -1,0 +1,223 @@
+# RUN 1
+
+i-upf (gray failure injection)
+
+FAILURE_START: 08:15:15.423
+
+agent.py
+
+2026-04-02 08:14:54,225 Agent started — monitoring N9: 10.160.101.143 -> 10.160.101.148
+2026-04-02 08:14:56,545 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:15:00,893 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:15:05,249 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:15:09,609 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:15:13,941 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:15:19,061 N9 loss=20.00%  sent=10  received=8  lost=2  seqs=1-9
+2026-04-02 08:15:19,061 GRAY FAILURE detected! loss=20.0%
+2026-04-02 08:15:26,723 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:15:32,942 N9 loss=20.00%  sent=10  received=8  lost=2  seqs=1-10
+2026-04-02 08:15:32,943 GRAY FAILURE detected! loss=20.0%
+2026-04-02 08:15:38,570 N9 loss=10.00%  sent=10  received=9  lost=1  seqs=1-9
+2026-04-02 08:15:38,571 Confirmed — healing now!
+2026-04-02 08:15:38,597   Steer attempt 1: FARID=5
+2026-04-02 08:15:38,722   Steer attempt 2: FARID=3
+2026-04-02 08:15:41,850   Steer attempt 3: FARID=7
+2026-04-02 08:15:41,850 SUCCESS — steered to 10.160.101.198
+2026-04-02 08:15:41,850 ==================================================
+2026-04-02 08:15:41,850 CONVERGENCE METRICS
+2026-04-02 08:15:41,850   Time to heal            : 3.3s
+2026-04-02 08:15:41,850   Total convergence       : 8.9s
+2026-04-02 08:15:41,850 ==================================================
+2026-04-02 08:15:41,850 PACKET LOSS SUMMARY
+2026-04-02 08:15:41,850   First loss detected     : 08:15:32
+2026-04-02 08:15:41,850   Last loss detected      : 08:15:38
+2026-04-02 08:15:41,850 ==================================================
+
+Reading PCAP: stream1_0204.pcap
+
+# ==================================================
+Packets Measurement Results with Phases
+
+# ==================================================
+PHASE 1 — Baseline (before failure)
+
+Packets received : 220
+Packets lost     : 0
+Packet loss      : 0.00%
+Average inter-arrival: 12.71 ms
+Estimated MOS    : 4.50
+
+# ==================================================
+PHASE 2 — Gray Failure
+
+Packets received : 20
+Packets lost     : 3
+Packet loss      : 13.04%
+Average inter-arrival: 2.17 ms
+Estimated MOS    : 3.00
+
+# ==================================================
+PHASE 3 — Recovery (after healing)
+
+Packets received : 9593
+Packets lost     : 1987
+Packet loss      : 17.16%
+Average inter-arrival: 5.81 ms
+Estimated MOS    : 3.00
+
+# ==================================================
+OVERALL
+
+Packets received : 9833
+Packets lost     : 1990
+Packet loss      : 16.83%
+Average inter-arrival: 5.95 ms
+Estimated MOS    : 3.00
+
+
+# RUN 2
+
+i-upf (gray failure injection)
+
+FAILURE_START: 08:19:48.697
+
+agent.py
+
+2026-04-02 08:19:22,349 Agent started — monitoring N9: 10.160.101.143 -> 10.160.101.148
+2026-04-02 08:19:24,685 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:19:29,025 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:19:33,345 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:19:37,681 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:19:42,005 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:19:46,329 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:19:51,070 N9 loss=30.00%  sent=10  received=7  lost=3  seqs=1-10
+2026-04-02 08:19:51,070 GRAY FAILURE detected! loss=30.0%
+2026-04-02 08:19:55,976 N9 loss=30.00%  sent=10  received=7  lost=3  seqs=1-10
+2026-04-02 08:19:55,976 Confirmed — healing now!
+2026-04-02 08:19:59,004   Steer attempt 1: FARID=3
+2026-04-02 08:19:59,131   Steer attempt 2: FARID=7
+2026-04-02 08:19:59,131 SUCCESS — steered to 10.160.101.198
+2026-04-02 08:19:59,131 ==================================================
+2026-04-02 08:19:59,131 CONVERGENCE METRICS
+2026-04-02 08:19:59,131   Time to heal            : 3.2s
+2026-04-02 08:19:59,131   Total convergence       : 8.1s
+2026-04-02 08:19:59,131 ==================================================
+2026-04-02 08:19:59,131 PACKET LOSS SUMMARY
+2026-04-02 08:19:59,131   First loss detected     : 08:19:51
+2026-04-02 08:19:59,131   Last loss detected      : 08:19:55
+2026-04-02 08:19:59,131 ==================================================
+
+measurement.py
+
+Reading PCAP: stream2_0204.pcap
+
+# ==================================================
+Packets Measurement Results with Phases
+
+# ==================================================
+PHASE 1 — Baseline (before failure)
+
+Packets received : 1620
+Packets lost     : 0
+Packet loss      : 0.00%
+Average inter-arrival: 5.92 ms
+Estimated MOS    : 4.50
+
+# ==================================================
+PHASE 2 — Gray Failure
+
+Packets received : 20
+Packets lost     : 3
+Packet loss      : 13.04%
+Average inter-arrival: 4.37 ms
+Estimated MOS    : 3.00
+
+# ==================================================
+PHASE 3 — Recovery (after healing)
+
+Packets received : 12958
+Packets lost     : 1184
+Packet loss      : 8.37%
+Average inter-arrival: 5.20 ms
+Estimated MOS    : 3.50
+
+# ==================================================
+OVERALL
+
+Packets received : 14598
+Packets lost     : 1187
+Packet loss      : 7.52%
+Average inter-arrival: 5.27 ms
+Estimated MOS    : 3.50
+
+# RUN 3
+
+i-upf (gray failure injection)
+
+FAILURE_START: 08:26:03.694
+
+agent.py
+
+2026-04-02 08:25:40,083 Agent started — monitoring N9: 10.160.101.143 -> 10.160.101.148
+2026-04-02 08:25:42,422 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:25:46,749 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:25:51,069 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:25:55,401 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:25:59,733 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-02 08:26:04,302 N9 loss=10.00%  sent=10  received=9  lost=1  seqs=1-10
+2026-04-02 08:26:04,303 GRAY FAILURE detected! loss=10.0%
+2026-04-02 08:26:09,771 N9 loss=20.00%  sent=10  received=8  lost=2  seqs=1-10
+2026-04-02 08:26:09,771 Confirmed — healing now!
+2026-04-02 08:26:09,798   Steer attempt 1: FARID=7
+2026-04-02 08:26:09,798 SUCCESS — steered to 10.160.101.198
+2026-04-02 08:26:09,798 ==================================================
+2026-04-02 08:26:09,798 CONVERGENCE METRICS
+2026-04-02 08:26:09,798   Time to heal            : 0.0s
+2026-04-02 08:26:09,798   Total convergence       : 5.5s
+2026-04-02 08:26:09,798 ==================================================
+2026-04-02 08:26:09,798 PACKET LOSS SUMMARY
+2026-04-02 08:26:09,798   First loss detected     : 08:26:04
+2026-04-02 08:26:09,798   Last loss detected      : 08:26:09
+2026-04-02 08:26:09,798 ==================================================
+
+
+Reading PCAP: stream3_0204.pcap
+
+# ==================================================
+Packets Measurement Results with Phases
+
+# ==================================================
+PHASE 1 — Baseline (before failure)
+
+Packets received : 220
+Packets lost     : 0
+Packet loss      : 0.00%
+Average inter-arrival: 12.72 ms
+Estimated MOS    : 4.50
+
+# ==================================================
+PHASE 2 — Gray Failure
+
+Packets received : 20
+Packets lost     : 5
+Packet loss      : 20.00%
+Average inter-arrival: 0.00 ms
+Estimated MOS    : 2.00
+
+# ==================================================
+PHASE 3 — Recovery (after healing)
+
+Packets received : 7624
+Packets lost     : 731
+Packet loss      : 8.75%
+Average inter-arrival: 5.23 ms
+Estimated MOS    : 3.50
+
+# ==================================================
+OVERALL
+
+Packets received : 7864
+Packets lost     : 736
+Packet loss      : 8.56%
+Average inter-arrival: 5.42 ms
+Estimated MOS    : 3.50
