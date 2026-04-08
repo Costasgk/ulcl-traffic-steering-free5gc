@@ -2793,8 +2793,36 @@ Estimated MOS    : 3.50</code></pre>
             </div>
           </div>
         </div>
-      </section>
 
+        <div style="font-family: 'DM Sans', sans-serif; margin-top: 20px;">
+          <div
+            style="background-color: var(--blue-pale); border-left: 4px solid var(--blue); padding: 1.5rem; border-radius: 2px;">
+            <h3 style="margin-top: 0; color: var(--blue); font-family: 'Playfair Display', serif; font-weight: 600;">
+              Important Update — 08 Apr 2026
+            </h3>
+            <p style="color: #1a3a6a; line-height: 1.75; margin-bottom: 15px;">
+              The autonomous agent has been upgraded to detect <strong style="color: rgb(65, 65, 65);">high jitter</strong> in
+              addition to packet loss. Previously the agent monitored only packet loss on the N9 path. Now it
+              independently detects sustained jitter spikes and can trigger steering on either condition or both
+              simultaneously.
+            </p>
+            <div style="background: #f5f2ed; padding: 15px; border: 1px solid #d4cfc6; border-radius: 4px;">
+              <strong
+                style="color: var(--blue); display: block; margin-bottom: 8px; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Gray
+                failure injection — jitter</strong>
+              <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #6b6560; line-height: 1.7;">
+                The following command injects a base delay of 50 ms with 40 ms normally-distributed jitter — packets
+                arrive at unpredictable intervals while the link remains technically alive, creating an invisible
+                failure invisible to loss-only monitors.
+              </p>
+              <code
+                style="font-family: 'DM Mono', monospace; font-size: 12px; background: #1a1814; color: #8acea8; padding: 8px 12px; border-radius: 4px; display: block;">
+        tc qdisc add dev ens18 root netem delay 50ms 40ms distribution normal && echo "FAILURE_START: $(date '+%H:%M:%S.%3N')"
+      </code>
+            </div>
+          </div>
+        </div>
+      </section>
       <!-- Section 16: Helpful Links -->
       <section id="links">
         <div class="section-label"><span class="section-num">&sect; 16</span><span class="section-rule"></span></div>
