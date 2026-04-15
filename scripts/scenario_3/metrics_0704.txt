@@ -1,5 +1,6 @@
 opou 07 h wra --> 10 
 opou 08 h wra --> 11
+opou 11 h wra --> 11
 
 -------------------------------------------------
 -                                                -
@@ -217,3 +218,102 @@ localadmin@free5gc:~/scenario_3$ python3 agent.py
 2026-04-07 08:32:28,653   First loss detected     : 08:32:17
 2026-04-07 08:32:28,653   Last loss detected      : 08:32:22
 2026-04-07 08:32:28,653 ==================================================
+
+
+
+--------------------------------------------------
+-                                                -
+-                 RUN_6 07-04                    -
+-                (maybe not used (?))            -
+--------------------------------------------------
+
+localadmin@i-upf:~$ sudo tc qdisc add dev ens18 root netem delay 15ms loss 20% && echo "FAILURE_START: $(date '+%H:%M:%S.%3N')"
+[sudo] password for localadmin: 
+FAILURE_START: 11:58:00.568
+
+2026-04-07 11:56:55,177 Agent started — monitoring N9: 10.160.101.143 -> 10.160.101.148
+2026-04-07 11:56:57,557 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:01,885 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:06,213 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:10,537 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:14,877 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:19,213 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:23,537 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:27,869 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:32,193 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:36,529 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:40,865 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:45,201 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:49,521 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:53,853 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:57:58,201 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:58:02,784 N9 loss=30.00%  sent=10  received=7  lost=3  seqs=1-10
+2026-04-07 11:58:02,785 GRAY FAILURE detected! loss=30.0%
+2026-04-07 11:58:07,899 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 11:58:13,240 N9 loss=10.00%  sent=10  received=9  lost=1  seqs=2-10
+2026-04-07 11:58:13,240 GRAY FAILURE detected! loss=10.0%
+2026-04-07 11:58:17,920 N9 loss=20.00%  sent=10  received=8  lost=2  seqs=2-10
+2026-04-07 11:58:17,920 Confirmed — healing now!
+2026-04-07 11:58:17,947   Steer attempt 1: FARID=5
+2026-04-07 11:58:18,073   Steer attempt 2: FARID=7
+2026-04-07 11:58:18,073 SUCCESS — steered to 10.160.101.198
+2026-04-07 11:58:18,073 ==================================================
+2026-04-07 11:58:18,073 CONVERGENCE METRICS
+2026-04-07 11:58:18,073   Time to heal            : 0.2s
+2026-04-07 11:58:18,073   Total convergence       : 4.8s
+2026-04-07 11:58:18,074 ==================================================
+2026-04-07 11:58:18,074 PACKET LOSS SUMMARY
+2026-04-07 11:58:18,074   First loss detected     : 11:58:13
+2026-04-07 11:58:18,074   Last loss detected      : 11:58:17
+2026-04-07 11:58:18,074 ==================================================
+
+
+--------------------------------------------------
+-                                                -
+-                 RUN_7 07-04                    -
+-                                                -
+--------------------------------------------------
+
+localadmin@i-upf:~$ sudo tc qdisc add dev ens18 root netem delay 15ms loss 20% && echo "FAILURE_START: $(date '+%H:%M:%S.%3N')"
+FAILURE_START: 12:05:42.481
+
+localadmin@free5gc:~/scenario_3$ python3 agent.py
+2026-04-07 12:04:32,361 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:04:36,697 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:04:41,029 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:04:45,357 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:04:49,685 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:04:54,017 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:04:58,345 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:02,677 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:07,029 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:11,369 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:15,701 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:20,029 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:24,365 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:28,705 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:33,045 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:37,385 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:41,733 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:47,136 N9 loss=40.00%  sent=10  received=6  lost=4  seqs=1-10
+2026-04-07 12:05:47,136 GRAY FAILURE detected! loss=40.0%
+2026-04-07 12:05:52,072 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:05:57,668 N9 loss=30.00%  sent=10  received=7  lost=3  seqs=3-10
+2026-04-07 12:05:57,668 GRAY FAILURE detected! loss=30.0%
+2026-04-07 12:06:03,807 N9 loss=0.00%  sent=10  received=10  lost=0  seqs=1-10
+2026-04-07 12:06:09,007 N9 loss=10.00%  sent=10  received=9  lost=1  seqs=1-10
+2026-04-07 12:06:09,007 GRAY FAILURE detected! loss=10.0%
+2026-04-07 12:06:14,403 N9 loss=10.00%  sent=10  received=9  lost=1  seqs=2-10
+2026-04-07 12:06:14,403 Confirmed — healing now!
+2026-04-07 12:06:17,432   Steer attempt 1: FARID=5
+2026-04-07 12:06:17,559   Steer attempt 2: FARID=7
+2026-04-07 12:06:17,559 SUCCESS — steered to 10.160.101.198
+2026-04-07 12:06:17,559 ==================================================
+2026-04-07 12:06:17,559 CONVERGENCE METRICS
+2026-04-07 12:06:17,559   Time to heal            : 3.2s
+2026-04-07 12:06:17,559   Total convergence       : 8.6s
+2026-04-07 12:06:17,559 ==================================================
+2026-04-07 12:06:17,559 PACKET LOSS SUMMARY
+2026-04-07 12:06:17,559   First loss detected     : 12:06:09
+2026-04-07 12:06:17,559   Last loss detected      : 12:06:14
+2026-04-07 12:06:17,559 ==================================================
