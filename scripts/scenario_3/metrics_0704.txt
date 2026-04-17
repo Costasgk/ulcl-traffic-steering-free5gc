@@ -44,6 +44,49 @@ FAILURE_START: 07:50:58.768
 2026-04-07 07:51:11,137   Last loss detected      : 07:51:11
 2026-04-07 07:51:11,137 ==================================================
 
+
+Reading PCAP: metrics/stream1_0704.pcap
+
+==================================================
+Packets Measurement Results with Phases
+==================================================
+
+==================================================
+PHASE 1 — Baseline (before failure)
+==================================================
+Packets received : 480
+Packets lost     : 2
+Packet loss      : 0.41%
+Average inter-arrival: 5.55 ms
+Estimated MOS    : 4.50
+
+==================================================
+PHASE 2 — Gray Failure
+==================================================
+Packets received : 20
+Packets lost     : 14
+Packet loss      : 41.18%
+Average inter-arrival: 0.03 ms
+Estimated MOS    : 2.00
+
+==================================================
+PHASE 3 — Recovery (after healing)
+==================================================
+Packets received : 118138
+Packets lost     : 7592
+Packet loss      : 6.04%
+Average inter-arrival: 1.55 ms
+Estimated MOS    : 3.50
+
+==================================================
+OVERALL
+==================================================
+Packets received : 118638
+Packets lost     : 7608
+Packet loss      : 6.03%
+Average inter-arrival: 1.57 ms
+Estimated MOS    : 3.50
+
 --------------------------------------------------
 -                                                -
 -                 RUN_2 07-04                    -
@@ -87,6 +130,49 @@ localadmin@free5gc:~/scenario_3$ python3 agent.py
 2026-04-07 07:57:57,456   Last loss detected      : 07:57:54
 2026-04-07 07:57:57,456 ==================================================
 
+Reading PCAP: metrics/stream2_0704.pcap
+
+==================================================
+Packets Measurement Results with Phases
+==================================================
+
+==================================================
+PHASE 1 — Baseline (before failure)
+==================================================
+Packets received : 600
+Packets lost     : 0
+Packet loss      : 0.00%
+Average inter-arrival: 4.44 ms
+Estimated MOS    : 4.50
+
+==================================================
+PHASE 2 — Gray Failure
+==================================================
+Packets received : 80
+Packets lost     : 83
+Packet loss      : 50.92%
+Average inter-arrival: 0.36 ms
+Estimated MOS    : 2.00
+
+==================================================
+PHASE 3 — Recovery (after healing)
+==================================================
+Packets received : 117677
+Packets lost     : 7627
+Packet loss      : 6.09%
+Average inter-arrival: 1.56 ms
+Estimated MOS    : 3.50
+
+==================================================
+OVERALL
+==================================================
+Packets received : 118357
+Packets lost     : 7710
+Packet loss      : 6.12%
+Average inter-arrival: 1.57 ms
+Estimated MOS    : 3.50
+
+
 --------------------------------------------------
 -                                                -
 -                 RUN_3 07-04                    -
@@ -129,6 +215,47 @@ localadmin@free5gc:~/scenario_3$ python3 agent.py
 2026-04-07 08:11:18,736   Last loss detected      : 08:11:18
 2026-04-07 08:11:18,736 ==================================================
 
+Reading PCAP: metrics/stream3_0704.pcap
+
+==================================================
+Packets Measurement Results with Phases
+==================================================
+
+==================================================
+PHASE 1 — Baseline (before failure)
+==================================================
+Packets received : 680
+Packets lost     : 2
+Packet loss      : 0.29%
+Average inter-arrival: 3.92 ms
+Estimated MOS    : 4.50
+
+==================================================
+PHASE 2 — Gray Failure
+==================================================
+Packets received : 40
+Packets lost     : 10
+Packet loss      : 20.00%
+Average inter-arrival: 0.01 ms
+Estimated MOS    : 2.00
+
+==================================================
+PHASE 3 — Recovery (after healing)
+==================================================
+Packets received : 116392
+Packets lost     : 9147
+Packet loss      : 7.29%
+Average inter-arrival: 1.58 ms
+Estimated MOS    : 3.50
+
+==================================================
+OVERALL
+==================================================
+Packets received : 117112
+Packets lost     : 9159
+Packet loss      : 7.25%
+Average inter-arrival: 1.59 ms
+Estimated MOS    : 3.50
 
 --------------------------------------------------
 -                                                -
@@ -171,6 +298,48 @@ localadmin@free5gc:~/scenario_3$ python3 agent.py
 2026-04-07 08:26:50,025   First loss detected     : 08:26:43
 2026-04-07 08:26:50,025   Last loss detected      : 08:26:49
 2026-04-07 08:26:50,025 ==================================================
+
+Reading PCAP: metrics/stream4_0704.pcap
+
+==================================================
+Packets Measurement Results with Phases
+==================================================
+
+==================================================
+PHASE 1 — Baseline (before failure)
+==================================================
+Packets received : 580
+Packets lost     : 0
+Packet loss      : 0.00%
+Average inter-arrival: 4.59 ms
+Estimated MOS    : 4.50
+
+==================================================
+PHASE 2 — Gray Failure
+==================================================
+Packets received : 60
+Packets lost     : 96
+Packet loss      : 61.54%
+Average inter-arrival: 0.02 ms
+Estimated MOS    : 2.00
+
+==================================================
+PHASE 3 — Recovery (after healing)
+==================================================
+Packets received : 120623
+Packets lost     : 5178
+Packet loss      : 4.12%
+Average inter-arrival: 1.52 ms
+Estimated MOS    : 4.00
+
+==================================================
+OVERALL
+==================================================
+Packets received : 121263
+Packets lost     : 5274
+Packet loss      : 4.17%
+Average inter-arrival: 1.53 ms
+Estimated MOS    : 4.00
 
 --------------------------------------------------
 -                                                -
@@ -219,12 +388,52 @@ localadmin@free5gc:~/scenario_3$ python3 agent.py
 2026-04-07 08:32:28,653   Last loss detected      : 08:32:22
 2026-04-07 08:32:28,653 ==================================================
 
+Reading PCAP: metrics/stream5_0704.pcap
 
+==================================================
+Packets Measurement Results with Phases
+==================================================
+
+==================================================
+PHASE 1 — Baseline (before failure)
+==================================================
+Packets received : 560
+Packets lost     : 0
+Packet loss      : 0.00%
+Average inter-arrival: 4.76 ms
+Estimated MOS    : 4.50
+
+==================================================
+PHASE 2 — Gray Failure
+==================================================
+Packets received : 60
+Packets lost     : 35
+Packet loss      : 36.84%
+Average inter-arrival: 0.01 ms
+Estimated MOS    : 2.00
+
+==================================================
+PHASE 3 — Recovery (after healing)
+==================================================
+Packets received : 118131
+Packets lost     : 7589
+Packet loss      : 6.04%
+Average inter-arrival: 1.55 ms
+Estimated MOS    : 3.50
+
+==================================================
+OVERALL
+==================================================
+Packets received : 118751
+Packets lost     : 7624
+Packet loss      : 6.03%
+Average inter-arrival: 1.57 ms
+Estimated MOS    : 3.50
 
 --------------------------------------------------
 -                                                -
 -                 RUN_6 07-04                    -
--                (maybe not used (?))            -
+-                                                -
 --------------------------------------------------
 
 localadmin@i-upf:~$ sudo tc qdisc add dev ens18 root netem delay 15ms loss 20% && echo "FAILURE_START: $(date '+%H:%M:%S.%3N')"
@@ -267,11 +476,53 @@ FAILURE_START: 11:58:00.568
 2026-04-07 11:58:18,074   Last loss detected      : 11:58:17
 2026-04-07 11:58:18,074 ==================================================
 
+Reading PCAP: metrics/stream6_0704.pcap
+
+==================================================
+Packets Measurement Results with Phases
+==================================================
+
+==================================================
+PHASE 1 — Baseline (before failure)
+==================================================
+Packets received : 500
+Packets lost     : 2
+Packet loss      : 0.40%
+Average inter-arrival: 5.25 ms
+Estimated MOS    : 4.50
+
+==================================================
+PHASE 2 — Gray Failure
+==================================================
+Packets received : 20
+Packets lost     : 4
+Packet loss      : 16.67%
+Average inter-arrival: 0.04 ms
+Estimated MOS    : 3.00
+
+==================================================
+PHASE 3 — Recovery (after healing)
+==================================================
+Packets received : 115467
+Packets lost     : 10055
+Packet loss      : 8.01%
+Average inter-arrival: 1.59 ms
+Estimated MOS    : 3.50
+
+==================================================
+OVERALL
+==================================================
+Packets received : 115987
+Packets lost     : 10061
+Packet loss      : 7.98%
+Average inter-arrival: 1.60 ms
+Estimated MOS    : 3.50
+
 
 --------------------------------------------------
 -                                                -
 -                 RUN_7 07-04                    -
--                                                -
+-                (maybe not used (?))            -
 --------------------------------------------------
 
 localadmin@i-upf:~$ sudo tc qdisc add dev ens18 root netem delay 15ms loss 20% && echo "FAILURE_START: $(date '+%H:%M:%S.%3N')"
@@ -317,3 +568,45 @@ localadmin@free5gc:~/scenario_3$ python3 agent.py
 2026-04-07 12:06:17,559   First loss detected     : 12:06:09
 2026-04-07 12:06:17,559   Last loss detected      : 12:06:14
 2026-04-07 12:06:17,559 ==================================================
+
+Reading PCAP: metrics/stream7_0704.pcap
+
+==================================================
+Packets Measurement Results with Phases
+==================================================
+
+==================================================
+PHASE 1 — Baseline (before failure)
+==================================================
+Packets received : 540
+Packets lost     : 0
+Packet loss      : 0.00%
+Average inter-arrival: 4.91 ms
+Estimated MOS    : 4.50
+
+==================================================
+PHASE 2 — Gray Failure
+==================================================
+Packets received : 20
+Packets lost     : 26
+Packet loss      : 56.52%
+Average inter-arrival: 0.01 ms
+Estimated MOS    : 2.00
+
+==================================================
+PHASE 3 — Recovery (after healing)
+==================================================
+Packets received : 105876
+Packets lost     : 19736
+Packet loss      : 15.71%
+Average inter-arrival: 1.73 ms
+Estimated MOS    : 3.00
+
+==================================================
+OVERALL
+==================================================
+Packets received : 106436
+Packets lost     : 19762
+Packet loss      : 15.66%
+Average inter-arrival: 1.75 ms
+Estimated MOS    : 3.00
