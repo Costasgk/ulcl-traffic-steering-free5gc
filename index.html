@@ -2784,7 +2784,7 @@ Estimated MOS    : 3.50</code></pre>
 
           <div class="callout callout-info">
             <span class="callout-icon">&#9432;</span>
-            <div class="callout-body">
+            <div class="callout-body" style="display: ruby;">
               <strong>Event Explanation:</strong> This array illustrates the <strong>Closed-Loop Control</strong>
               cycle. The agent spends the first 35 seconds confirming network health. At 10:35:53, the "Gray Failure"
               threshold is breached. To avoid "flapping" (false positives), the agent waits for a second confirmation
@@ -2792,7 +2792,19 @@ Estimated MOS    : 3.50</code></pre>
               PSA-UPF2.
             </div>
           </div>
+
+          <div class="callout callout-warn">
+            <span class="callout-icon">&#9432;</span>
+            <div class="callout-body">
+              <strong>Configuration Note:</strong> When using <code>iperf3</code>, prevent ICMP port-unreachable errors
+              by running the following command on the server:
+              <br>
+              <code>sudo iptables -A OUTPUT -p icmp --icmp-type port-unreachable -j DROP</code>
+            </div>
+          </div>
+
         </div>
+
 
         <div style="font-family: 'DM Sans', sans-serif; margin-top: 20px;">
           <div
@@ -2801,7 +2813,8 @@ Estimated MOS    : 3.50</code></pre>
               Important Update — 08 Apr 2026
             </h3>
             <p style="color: #1a3a6a; line-height: 1.75; margin-bottom: 15px;">
-              The autonomous agent has been upgraded to detect <strong style="color: rgb(65, 65, 65);">high jitter</strong> in
+              The autonomous agent has been upgraded to detect <strong style="color: rgb(65, 65, 65);">high
+                jitter</strong> in
               addition to packet loss. Previously the agent monitored only packet loss on the N9 path. Now it
               independently detects sustained jitter spikes and can trigger steering on either condition or both
               simultaneously.
