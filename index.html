@@ -1045,8 +1045,10 @@
         <a href="#scenario1"><span class="nav-num">13</span> Scenario 1 &mdash; Invisible Redirect</a>
         <a href="#scenario2"><span class="nav-num">14</span> Scenario 2 &mdash; ULCL Exhaustion</a>
         <a href="#scenario3"><span class="nav-num">15</span> Scenario 3 &mdash; Self-Healing Agent</a>
+        <div class="nav-chapter">Bonus</div>
+        <a href="#multiue"><span class="nav-num">16</span> Multi-UE Steering</a>
         <div class="nav-chapter">References</div>
-        <a href="#links"><span class="nav-num">16</span> Helpful Links</a>
+        <a href="#links"><span class="nav-num">17</span> Helpful Links</a>
       </nav>
     </aside>
 
@@ -2836,7 +2838,533 @@ Estimated MOS    : 3.50</code></pre>
           </div>
         </div>
       </section>
-      <!-- Section 16: Helpful Links -->
+      <!-- Section 16: Multi-UE Steering -->
+      <section id="multiue">
+        <div class="section-label"><span class="section-num">&sect; 17</span><span class="section-rule"></span></div>
+        <h2>Multi-UE Steering &mdash; Many Users</h2>
+        <p>Scaling dynamic steering for multiple UEs requires four specific system changes. This guide documents the
+          process for an 8-UE configuration:</p>
+        <div class="checklist">
+          <div class="check-row">
+            <div class="check-mark">1</div>
+            <div class="check-label"><strong>Update <code>uerouting.yaml</code></strong> Configure routing group
+              membership and dual <code>specificPath</code> definitions.</div>
+          </div>
+          <div class="check-row">
+            <div class="check-mark">2</div>
+            <div class="check-label"><strong>Patch the SMF Steering Handler</strong> Apply two logic fixes in
+              <code>NFs/smf/internal/sbi/processor/steering.go</code>.
+            </div>
+          </div>
+          <div class="check-row">
+            <div class="check-mark">3</div>
+            <div class="check-label"><strong>Configure N4 Sessions</strong> Ensure both PSA-UPFs establish N4 sessions
+              automatically at boot.</div>
+          </div>
+          <div class="check-row">
+            <div class="check-mark">4</div>
+            <div class="check-label"><strong>Update Steering Script</strong> Modify <code>steering.sh</code> to enable
+              correct FARID extraction.</div>
+          </div>
+        </div>
+
+        <div class="callout callout-info">
+          <span class="callout-icon">&#9432;</span>
+          <div class="callout-body" style="display: ruby;">
+            <strong>Note:</strong> This implementation requires <strong>no kernel patches</strong>, <strong>no new
+              VMs</strong>, and <strong>no changes</strong> to the standard <code>smfcfg.yaml</code>.
+          </div>
+        </div>
+
+        <h3>Step 1 &mdash; Spawn N UEs</h3>
+        <p>On the ueransim-ue VM, we start 8 UE instances with a single command. UERANSIM will allocate sequential
+          tunnel
+          interfaces <code>uesimtun0</code>&ndash;<code>uesimtun7</code> and IP addresses
+          <code>10.61.0.1</code>&ndash;<code>10.61.0.8</code>.
+        </p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">ueransim-ue</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>cd ~/UERANSIM/build
+sudo ./nr-ue -c ../config/free5gc-ue.yaml -n 8
+
+<span class="s-comment"># Verify all tunnel interfaces are up</span>
+ip addr show | grep uesimtun</code></pre>
+        </div>
+
+        <div class="callout callout-warn"><span class="callout-icon">&#9888;</span>
+          <div class="callout-body"><strong>SUPI range</strong>The UE config must have IMSIs
+            <code>imsi-208930000000001</code> through <code>imsi-208930000000008</code> registered in both UDM and the
+            UE YAML.<br>The <code>-n 8</code> flag increments the last digit automatically.
+          </div>
+        </div>
+        <h3>Step 2 &mdash; Execute in each PSA-UPF</h3>
+
+        <p>Execute the following commands on <strong>each PSA-UPF node</strong>:</p>
+
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta">
+              <span class="code-lang">bash</span>
+              <span class="code-file">psa-upf</span>
+            </div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+
+          <pre><code><span class="s-comment"># Already exists</span>
+sudo iptables -t nat -A POSTROUTING -s 10.60.0.0/16 -o ens18 -j MASQUERADE
+
+<span class="s-comment"># Addition</span>
+sudo iptables -t nat -A POSTROUTING -s 10.61.0.0/16 -o ens18 -j MASQUERADE
+
+<span class="s-comment"># Already exists</span>
+sudo ip route add 10.160.101.145/32 dev ens18</code></pre>
+        </div>
+
+        <div class="callout callout-info">
+          <span class="callout-icon">&#9432;</span>
+          <div class="callout-body">
+            These rules ensure that traffic from the <code>10.61.0.0/16</code> UE subnet is properly NATed and routed
+            through the external interface (<code>ens18</code>) on each PSA-UPF.
+          </div>
+        </div>
+        <h3>Step 3 &mdash; Add All SUPIs to the Routing Group</h3>
+        <p>By default, <code>uerouting.yaml</code> only lists SUPI <code>...001</code>. UEs 2&ndash;8 fall back to a
+          generic routing context, causing all of them to share SEID&nbsp;1 &mdash; a single PDU session context with an
+          ever-growing set of FARs. Add all 8 IMSIs to the same group.</p>
+
+        <div class="diff-wrap">
+          <div class="diff-bar">
+            <span class="diff-title">Add all 8 SUPIs to routing group</span>
+            <span class="diff-file-label">config/uerouting.yaml</span>
+          </div>
+          <div class="diff-body">
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span
+                class="diff-text">ueRoutingInfo:</span></div>
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text"> UE1:</span>
+            </div>
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text">
+                members:</span></div>
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text"> -
+                imsi-208930000000001</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> -
+                imsi-208930000000002</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> -
+                imsi-208930000000003</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> -
+                imsi-208930000000004</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> -
+                imsi-208930000000005</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> -
+                imsi-208930000000006</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> -
+                imsi-208930000000007</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> -
+                imsi-208930000000008</span></div>
+          </div>
+        </div>
+
+        <h3>Step 4 &mdash; Add a Dual specificPath to Bootstrap Both PSA-UPFs</h3>
+        <p>The SMF only establishes N4 sessions (which create PDRs) on UPFs that appear in the routing topology at PDU
+          session creation time. With only one <code>specificPath</code>, the other PSA-UPF receives no PDRs and
+          <strong>silently drops every GTP packet</strong> directed to it after steering &mdash; nothing appears on its
+          <code>upfgtp</code> interface.
+        </p>
+        <p>The fix is to define two <code>specificPath</code> entries pointing to <em>different destinations</em>. This
+          forces the SMF to establish N4 sessions on <em>both</em> PSA-UPFs at boot. The steering handler then updates
+          the I-UPF FAR to point to whichever PSA-UPF is needed &mdash; both are always ready to receive.</p>
+
+        <div class="diff-wrap">
+          <div class="diff-bar">
+            <span class="diff-title">Dual specificPath — bootstrap both PSA-UPFs</span>
+            <span class="diff-file-label">config/uerouting.yaml</span>
+          </div>
+          <div class="diff-body">
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text">
+                specificPath:</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text"> -
+                dest: 10.160.101.145/32</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text"> path:
+                [I-UPF, PSA-UPF2]</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> - dest:
+                10.160.101.145/32 <span class="s-comment"># server — routed via PSA-UPF2</span></span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> path:
+                [I-UPF, PSA-UPF2]</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> - dest:
+                10.160.101.144/32 <span class="s-comment"># dummy IP — forces N4 session on PSA-UPF</span></span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> path:
+                [I-UPF, PSA-UPF]</span></div>
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text"> - dest:
+                8.8.8.8/32</span></div>
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text"> path:
+                [I-UPF]</span></div>
+          </div>
+        </div>
+
+        <div class="callout callout-warn"><span class="callout-icon">&#9888;</span>
+          <div class="callout-body"><strong>Why a dummy IP?</strong> Both paths cannot share the same <code>dest</code>
+            — the SMF will only instantiate one of them. Using <code>10.160.101.144/32</code> (an unused IP near the
+            server) is enough to force a separate SDF-filtered data path through PSA-UPF, which causes the SMF to send
+            PFCP Session Establishment to PSA-UPF and register PDRs on it. The dummy traffic never actually arrives
+            anywhere; only the PDR registration matters.</div>
+        </div>
+
+        <h3>Complete uerouting.yaml</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">yaml</span><span
+                class="code-file">config/uerouting.yaml</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>info:
+  version: 1.0.7
+  description: Routing information for UE
+ueRoutingInfo:
+  UE1:
+    members:
+    - imsi-208930000000001
+    - imsi-208930000000002
+    - imsi-208930000000003
+    - imsi-208930000000004
+    - imsi-208930000000005
+    - imsi-208930000000006
+    - imsi-208930000000007
+    - imsi-208930000000008
+    topology:
+      - A: gNB1
+        B: I-UPF
+      - A: I-UPF
+        B: PSA-UPF
+    specificPath:
+      - dest: 10.160.101.145/32
+        path: [I-UPF, PSA-UPF2]
+      - dest: 10.160.101.144/32
+        path: [I-UPF, PSA-UPF]
+      - dest: 8.8.8.8/32
+        path: [I-UPF]</code></pre>
+        </div>
+
+        <h3>Step 5 &mdash; Fix the SMF Steering Handler</h3>
+        <p>Two bugs in <code>steering.go</code> prevent correct multi-UE operation. Both must be fixed before
+          rebuilding.</p>
+
+        <h3>Bug A &mdash; The Stale-IP Guard</h3>
+        <p>The original handler only collected FARs whose current peer address was <em>not</em> already the target UPF.
+          This made the call fail for any UE whose FAR had already been updated &mdash; either from a previous steer, or
+          because multiple SUPIs share state after the same PFCP call. The fix: collect all SDF-filtered FARs
+          unconditionally. Steering is idempotent; re-applying the same rule is harmless.</p>
+
+        <div class="diff-wrap">
+          <div class="diff-bar">
+            <span class="diff-title">Remove stale-IP guard — make steering idempotent</span>
+            <span class="diff-file-label">NFs/smf/internal/sbi/processor/steering.go</span>
+          </div>
+          <div class="diff-body">
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text"> ohc :=
+                pdr.FAR.ForwardingParameters.OuterHeaderCreation</span></div>
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text"> if ohc ==
+                nil {</span></div>
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text">
+                continue</span></div>
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text"> }</span>
+            </div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text"> if
+                ohc.Ipv4Address.String() != req.TargetUPF {</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">
+                ulcfNodes = append(ulcfNodes, node)</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">
+                }</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> <span
+                  class="s-comment">// Always collect — idempotent, no stale-IP guard</span></span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> ulcfNodes =
+                append(ulcfNodes, node)</span></div>
+          </div>
+        </div>
+
+        <h3>Bug B &mdash; Only One FAR Updated per Call</h3>
+        <p>With two <code>specificPath</code> entries, each UE has <em>multiple</em> SDF-filtered FARs in its DataPath
+          pool. The original handler only updated <code>ulcfNodes[0]</code>. Go map iteration is random, so sometimes
+          the wrong FAR was updated. The fix: loop over every node in <code>ulcfNodes</code>, update all FARs, and send
+          them in a single PFCP Session Modification message.</p>
+
+        <div class="diff-wrap">
+          <div class="diff-bar">
+            <span class="diff-title">Update ALL FARs in one PFCP message</span>
+            <span class="diff-file-label">NFs/smf/internal/sbi/processor/steering.go</span>
+          </div>
+          <div class="diff-body">
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">
+                iUPFNode = ulcfNodes[0]</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text"> if
+                iUPFNode == nil {</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "I-UPF node not found"})</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">
+                return</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">
+                }</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text"> ulFAR
+                := iUPFNode.UpLinkTunnel.PDR.FAR</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text"> // ...
+                update only this one FAR ...</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">
+                pfcpState := &amp;PFCPState{</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">
+                farList: []*context.FAR{ulFAR},</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">
+                }</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> var pdrList
+                []*context.PDR</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> var farList
+                []*context.FAR</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> debugFARs :=
+                ""</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> for _, node
+                := range ulcfNodes {</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> ulFAR :=
+                node.UpLinkTunnel.PDR.FAR</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> if ulFAR ==
+                nil || ulFAR.ForwardingParameters == nil { continue }</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> existingTEID
+                := uint32(0)</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> if
+                ulFAR.ForwardingParameters.OuterHeaderCreation != nil {</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> existingTEID
+                = ulFAR.ForwardingParameters.OuterHeaderCreation.Teid</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> }</span>
+            </div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">
+                ulFAR.ForwardingParameters.OuterHeaderCreation = &amp;pfcpType.OuterHeaderCreation{</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">
+                OuterHeaderCreationDescription: pfcpType.OuterHeaderCreationGtpUUdpIpv4,</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> Ipv4Address:
+                targetIP, Teid: existingTEID,</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> }</span>
+            </div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> ulFAR.State
+                = smf_context.RULE_UPDATE</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> pdrList =
+                append(pdrList, node.UpLinkTunnel.PDR)</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> farList =
+                append(farList, ulFAR)</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> debugFARs +=
+                fmt.Sprintf("FARID=%d,UPF=%s;", ulFAR.FARID,</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">
+                node.UPF.NodeID.ResolveNodeIdToIp().String())</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> }</span>
+            </div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">
+                c.Header("X-Debug-FAR", debugFARs)</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> iUPFNode =
+                ulcfNodes[0]</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> pfcpState :=
+                &amp;PFCPState{</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> upf:
+                iUPFNode.UPF, pdrList: pdrList,</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> farList:
+                farList, barList: []*context.BAR{},</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> qerList:
+                nil, urrList: nil,</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> }</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>Step 6 &mdash; Rebuild the SMF</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">free5gc-core</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>cd ~/free5gc/NFs/smf
+go build -o ~/free5gc/bin/smf ./cmd/ && echo "BUILD OK"</code></pre>
+        </div>
+
+        <h3>Step 7 &mdash; Restart SMF and Reconnect UEs</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">free5gc-core</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-comment"># Kill SMF and restart with new binary</span>
+sudo kill $(pgrep -f "bin/smf")
+cd ~/free5gc
+sudo ./bin/smf -c config/smfcfg.yaml -u config/uerouting.yaml >> today.log 2>&1 &
+
+<span class="s-comment"># Wait 3s for PFCP re-association, then reconnect UEs</span>
+sleep 3
+
+<span class="s-comment"># On ueransim-ue: reconnect all 8</span>
+sudo ./nr-ue -c ../config/free5gc-ue.yaml -n 8</code></pre>
+        </div>
+
+        <h3>Step 8 &mdash; Verify Both PSA-UPFs Have PDRs</h3>
+        <p>After reconnecting UEs, confirm both PSA-UPFs have received N4 sessions. Each should show 16 PDRs (2 per UE
+          &times; 8 UEs).</p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-comment"># On PSA-UPF (10.160.101.148)</span>
+sudo /home/localadmin/gogtp5g-tunnel list pdr ens18 | grep -c '"ID"'
+<span class="s-comment"># Expected: 16</span>
+
+<span class="s-comment"># On PSA-UPF2 (10.160.101.198)</span>
+sudo /home/localadmin/go-gtp5gnl/cmd/gogtp5g-tunnel/gogtp5g-tunnel list pdr ens18 | grep -c '"ID"'
+<span class="s-comment"># Expected: 16</span></code></pre>
+        </div>
+
+        <div class="callout callout-error"><span class="callout-icon">&#10005;</span>
+          <div class="callout-body"><strong>If a PSA-UPF shows 0 or null PDRs</strong>The <code>specificPath</code> for
+            that UPF is missing or the UPF binary is using a stale config. Restart that UPF
+            (<code>sudo ip link delete upfgtp &amp;&amp; sudo ./upf -c upfcfg.yaml</code>), then restart the core and
+            reconnect UEs.</div>
+        </div>
+
+        <h3>Step 9 &mdash; Update steering.sh for 8 UEs</h3>
+        <p>The steering script needs the full SUPI list and a corrected FARID extraction. The <code>X-Debug-FAR</code>
+          header now returns multiple FAR IDs (one per path); use <code>head&nbsp;-1</code> to take only the first for
+          display.</p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">~/steering.sh</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>#!/bin/bash
+TARGET=$1
+<span class="s-comment"># Add the UEs</span>
+# Colors for pretty printing
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+SUPI_LIST=(
+    "imsi-208930000000001" "imsi-208930000000002" "imsi-208930000000003"
+    "imsi-208930000000004" "imsi-208930000000005" "imsi-208930000000006"
+    "imsi-208930000000007" "imsi-208930000000008"
+)
+
+if [ -z "$TARGET" ]; then
+    echo "Usage: $0 <target-upf-ip>"
+    exit 1
+fi
+
+# Print Header
+printf "%-25s | %-15s | %-20s\n" "SUPI" "STATUS" "FARIDs"
+echo "------------------------------------------------------------"
+
+for SUPI in "${SUPI_LIST[@]}"; do
+    RESULT=$(curl -s -v -X POST http://127.0.0.2:8000/nsmf-steering/v1/steer \
+        -H 'Content-Type: application/json' \
+        -d "{\"supi\":\"$SUPI\",\"targetUpf\":\"$TARGET\"}" 2>&1)
+
+    # Extract FARIDs and join them with commas instead of newlines
+    FARIDS=$(echo "$RESULT" | grep -i "x-debug-far" | grep -oP 'FARID=\K\d+' | paste -sd "," -)
+
+    if [ -z "$FARIDS" ]; then
+        printf "%-25s | ${RED}%-15s${NC} | %-20s\n" "$SUPI" "FAILED" "N/A"
+    else
+        printf "%-25s | ${GREEN}%-15s${NC} | %-20s\n" "$SUPI" "SUCCESS" "$FARIDS"
+    fi
+    
+    sleep 0.5
+done
+
+</code></pre>
+        </div>
+
+        <h3>Selective Single-UE Steering</h3>
+        <p>Because the steering API is per-SUPI, you can also move a single UE while leaving the others on their current
+          path. This is useful for targeted self-healing.</p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">direct curl</span></div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-comment"># Steer only UE 3 to PSA-UPF2</span>
+curl -s -X POST http://127.0.0.2:8000/nsmf-steering/v1/steer \
+  -H 'Content-Type: application/json' \
+  -d '{"supi":"imsi-208930000000003","targetUpf":"10.160.101.198"}'</code></pre>
+        </div>
+
+        <h3>Verification &mdash; Expected Output</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">expected output</span>
+            </div>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>-----------------------------------
+Steering imsi-208930000000001 to 10.160.101.198...
+SUCCESS: imsi-208930000000001 steered. FARID: 27
+-----------------------------------
+Steering imsi-208930000000002 to 10.160.101.198...
+SUCCESS: imsi-208930000000002 steered. FARID: 63
+-----------------------------------
+<span class="s-comment">... (6 more SUPIs) ...</span>
+-----------------------------------
+Done. Steered 8 UEs to 10.160.101.198</code></pre>
+        </div>
+
+        <h3>What Was Wrong &mdash; Root Cause Summary</h3>
+        <div class="vm-table-wrap">
+          <table class="vm-table">
+            <thead>
+              <tr>
+                <th>Bug</th>
+                <th>Symptom</th>
+                <th>Root Cause</th>
+                <th>Fix</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Missing SUPIs in routing group</td>
+                <td>UEs 2&ndash;8 share SEID 1; FAR table grows unboundedly</td>
+                <td><code>uerouting.yaml</code> only listed SUPI 001</td>
+                <td>Add all 8 SUPIs to the group</td>
+              </tr>
+              <tr>
+                <td>Single <code>specificPath</code></td>
+                <td>The other PSA-UPF has no PDRs; silently drops all GTP packets</td>
+                <td>SMF only establishes N4 sessions on UPFs in the routing topology</td>
+                <td>Add a second <code>specificPath</code> with a different destination</td>
+              </tr>
+              <tr>
+                <td>Stale-IP guard</td>
+                <td>HTTP 500 for SUPIs 2&ndash;8 when steering to <code>.148</code></td>
+                <td><code>ohc.Ipv4Address != targetUPF</code> skips FARs already at target</td>
+                <td>Remove the IP check; collect all SDF-filtered FARs unconditionally</td>
+              </tr>
+              <tr>
+                <td><code>ulcfNodes[0]</code> only</td>
+                <td>Non-deterministic steering; wrong FAR updated ~50% of calls</td>
+                <td>Go map iteration random; first node may not be the active FAR</td>
+                <td>Loop over all nodes; update every FAR in one PFCP message</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout-success" style="margin-top:28px"><span class="callout-icon">&#10003;</span>
+          <div class="callout-body"><strong>Verified result</strong>After applying all four changes, bidirectional bulk
+            steering (PSA-UPF &harr; PSA-UPF2) works reliably for all 8 UEs with zero packet loss during the path
+            switch. Selective single-UE steering also works independently.</div>
+        </div>
+      </section>
+      <!-- Section 17: Helpful Links -->
       <section id="links">
         <div class="section-label"><span class="section-num">&sect; 16</span><span class="section-rule"></span></div>
         <h2>Helpful Links</h2>
@@ -2888,7 +3416,6 @@ Estimated MOS    : 3.50</code></pre>
           </table>
         </div>
       </section>
-
     </main>
   </div>
 
