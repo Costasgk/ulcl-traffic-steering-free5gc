@@ -1412,6 +1412,162 @@ go build -o ~/free5gc/bin/smf ./cmd/</code></pre>
     s.<span class="s-fn">Processor</span>().<span class="s-fn">HandleSteerTraffic</span>(c)
 }</code></pre>
         </div>
+
+
+        <!-- ── steering.go — NEW FILE ──────────────────────────────────── -->
+        <h3>steering.go</h3>
+        <div class="callout callout-info" style="margin-top:0"><span class="callout-icon">&#9432;</span>
+          <div class="callout-body"><strong>New file &mdash; created from scratch</strong>
+            Lives at <code>NFs/smf/internal/sbi/processor/steering.go</code>.
+            Implements <code>HandleSteerTraffic</code>, the handler wired up by <code>api_steering.go</code>
+            above.
+            Contains two key bug-fixes required for multi-UE operation — see &sect;&nbsp;16 for full diffs
+            and root-cause analysis.
+          </div>
+        </div>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">go</span><span
+                class="code-file">NFs/smf/internal/sbi/processor/steering.go</span>
+            </div><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-kw">package</span> <span class="s-type">processor</span>
+
+<span class="s-kw">import</span> (
+    <span class="s-str">"fmt"</span>
+    <span class="s-str">"net/http"</span>
+    <span class="s-str">"github.com/free5gc/openapi/models"</span>
+    pfcpType <span class="s-str">"github.com/free5gc/pfcp/pfcpType"</span>
+    <span class="s-str">"github.com/free5gc/smf/internal/context"</span>
+    smf_context <span class="s-str">"github.com/free5gc/smf/internal/context"</span>
+    <span class="s-str">"github.com/gin-gonic/gin"</span>
+)
+
+<span class="s-kw">type</span> <span class="s-type">SteerRequest</span> <span class="s-kw">struct</span> {
+    SUPI      <span class="s-type">string</span> `json:<span class="s-str">"supi"</span>`
+    PDUSessID <span class="s-type">int32</span>  `json:<span class="s-str">"pduSessId"</span>`
+    TargetUPF <span class="s-type">string</span> `json:<span class="s-str">"targetUpf"</span>`
+}
+
+<span class="s-kw">func</span> (p *<span class="s-type">Processor</span>) <span class="s-fn">HandleSteerTraffic</span>(c *<span class="s-type">gin.Context</span>) {
+    <span class="s-kw">var</span> req <span class="s-type">SteerRequest</span>
+    <span class="s-kw">if</span> err := c.<span class="s-fn">ShouldBindJSON</span>(&amp;req); err != <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusBadRequest, gin.H{<span class="s-str">"error"</span>: err.<span class="s-fn">Error</span>()})
+        <span class="s-kw">return</span>
+    }
+    <span class="s-kw">if</span> req.PDUSessID == <span class="s-num">0</span> { req.PDUSessID = <span class="s-num">1</span> }
+
+    smContext := smf_context.<span class="s-fn">GetSMContextById</span>(req.SUPI, req.PDUSessID)
+    <span class="s-kw">if</span> smContext == <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusNotFound, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"SMContext not found"</span>, <span class="s-str">"supi"</span>: req.SUPI})
+        <span class="s-kw">return</span>
+    }
+
+    upi := smf_context.<span class="s-fn">GetUserPlaneInformation</span>()
+    targetUPNode := upi.<span class="s-fn">GetUPFNodeByIP</span>(req.TargetUPF)
+    <span class="s-kw">if</span> targetUPNode == <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusNotFound, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"Target UPF not found"</span>, <span class="s-str">"targetUpf"</span>: req.TargetUPF})
+        <span class="s-kw">return</span>
+    }
+    targetUPF := targetUPNode.UPF
+    targetUPFName := upi.<span class="s-fn">GetUPFNameByIp</span>(req.TargetUPF)
+
+    smContext.SMLock.<span class="s-fn">Lock</span>()
+    <span class="s-kw">defer</span> smContext.SMLock.<span class="s-fn">Unlock</span>()
+
+    iface := targetUPF.<span class="s-fn">GetInterface</span>(models.UpInterfaceType_N9, smContext.Dnn)
+    <span class="s-kw">if</span> iface == <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"Target UPF has no N9 interface"</span>})
+        <span class="s-kw">return</span>
+    }
+    targetIP, err := iface.<span class="s-fn">IP</span>(smContext.SelectedPDUSessionType)
+    <span class="s-kw">if</span> err != <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{<span class="s-str">"error"</span>: fmt.<span class="s-fn">Sprintf</span>(<span class="s-str">"Cannot get target UPF IP: %v"</span>, err)})
+        <span class="s-kw">return</span>
+    }
+
+    <span class="s-comment">// Collect ALL non-default-path nodes whose PDR carries an SDF filter.</span>
+    <span class="s-comment">// No stale-IP guard — steering is idempotent (Bug A fix: removes</span>
+    <span class="s-comment">// the ohc.Ipv4Address != req.TargetUPF check that broke repeated calls).</span>
+    <span class="s-kw">var</span> ulcfNodes []*<span class="s-type">context.DataPathNode</span>
+    <span class="s-kw">for</span> _, dp := <span class="s-kw">range</span> smContext.Tunnel.DataPathPool {
+        <span class="s-kw">if</span> dp.IsDefaultPath { <span class="s-kw">continue</span> }
+        <span class="s-kw">for</span> node := dp.FirstDPNode; node != <span class="s-kw">nil</span>; node = node.<span class="s-fn">Next</span>() {
+            <span class="s-kw">if</span> node.UpLinkTunnel == <span class="s-kw">nil</span> || node.UpLinkTunnel.PDR == <span class="s-kw">nil</span> { <span class="s-kw">continue</span> }
+            pdr := node.UpLinkTunnel.PDR
+            <span class="s-kw">if</span> pdr.PDI.SDFFilter == <span class="s-kw">nil</span> || pdr.FAR == <span class="s-kw">nil</span> ||
+               pdr.FAR.ForwardingParameters == <span class="s-kw">nil</span> ||
+               pdr.FAR.ForwardingParameters.OuterHeaderCreation == <span class="s-kw">nil</span> { <span class="s-kw">continue</span> }
+            ulcfNodes = <span class="s-fn">append</span>(ulcfNodes, node)
+        }
+    }
+    <span class="s-kw">if</span> <span class="s-fn">len</span>(ulcfNodes) == <span class="s-num">0</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"no ULCL steering FAR found pointing to old UPF"</span>})
+        <span class="s-kw">return</span>
+    }
+
+    <span class="s-comment">// Update every SDF-filtered FAR and send them all in one PFCP Session Modification.</span>
+    <span class="s-comment">// Looping over all nodes fixes Bug B (only ulcfNodes[0] was updated before,</span>
+    <span class="s-comment">// causing non-deterministic behaviour due to random Go map iteration order).</span>
+    <span class="s-kw">var</span> pdrList []*<span class="s-type">context.PDR</span>
+    <span class="s-kw">var</span> farList []*<span class="s-type">context.FAR</span>
+    debugFARs := <span class="s-str">""</span>
+    <span class="s-kw">for</span> _, node := <span class="s-kw">range</span> ulcfNodes {
+        ulFAR := node.UpLinkTunnel.PDR.FAR
+        <span class="s-kw">if</span> ulFAR == <span class="s-kw">nil</span> || ulFAR.ForwardingParameters == <span class="s-kw">nil</span> { <span class="s-kw">continue</span> }
+        existingTEID := <span class="s-type">uint32</span>(<span class="s-num">0</span>)
+        <span class="s-kw">if</span> ulFAR.ForwardingParameters.OuterHeaderCreation != <span class="s-kw">nil</span> {
+            existingTEID = ulFAR.ForwardingParameters.OuterHeaderCreation.Teid
+        }
+        ulFAR.ForwardingParameters.OuterHeaderCreation = &amp;pfcpType.<span class="s-type">OuterHeaderCreation</span>{
+            OuterHeaderCreationDescription: pfcpType.OuterHeaderCreationGtpUUdpIpv4,
+            Ipv4Address:                    targetIP,
+            Teid:                           existingTEID,
+        }
+        ulFAR.State = smf_context.RULE_UPDATE
+        pdrList = <span class="s-fn">append</span>(pdrList, node.UpLinkTunnel.PDR)
+        farList = <span class="s-fn">append</span>(farList, ulFAR)
+        debugFARs += fmt.<span class="s-fn">Sprintf</span>(<span class="s-str">"FARID=%d,UPF=%s;"</span>,
+            ulFAR.FARID, node.UPF.NodeID.<span class="s-fn">ResolveNodeIdToIp</span>().<span class="s-fn">String</span>())
+    }
+    <span class="s-kw">if</span> <span class="s-fn">len</span>(farList) == <span class="s-num">0</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"no valid FARs to update"</span>})
+        <span class="s-kw">return</span>
+    }
+    c.<span class="s-fn">Header</span>(<span class="s-str">"X-Debug-FAR"</span>, debugFARs)
+
+    iUPFNode := ulcfNodes[<span class="s-num">0</span>]
+    resChan := <span class="s-fn">make</span>(<span class="s-kw">chan</span> <span class="s-type">SendPfcpResult</span>, <span class="s-num">1</span>)
+    pfcpState := &amp;<span class="s-type">PFCPState</span>{
+        upf:     iUPFNode.UPF,
+        pdrList: pdrList,
+        farList: farList,
+        barList: []*<span class="s-type">context.BAR</span>{},
+        qerList: <span class="s-kw">nil</span>,
+        urrList: <span class="s-kw">nil</span>,
+    }
+    <span class="s-kw">go</span> <span class="s-fn">modifyExistingPfcpSession</span>(smContext, pfcpState, resChan, <span class="s-str">""</span>)
+    result := &lt;-resChan
+    <span class="s-fn">close</span>(resChan)
+
+    <span class="s-kw">if</span> result.Err != <span class="s-kw">nil</span> || result.Status != smf_context.SessionUpdateSuccess {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{
+            <span class="s-str">"error"</span>:  fmt.<span class="s-fn">Sprintf</span>(<span class="s-str">"PFCP modification failed: %v"</span>, result.Err),
+            <span class="s-str">"status"</span>: result.Status,
+        })
+        <span class="s-kw">return</span>
+    }
+    smContext.SelectedUPF = targetUPNode
+    c.<span class="s-fn">JSON</span>(http.StatusOK, gin.H{
+        <span class="s-str">"status"</span>:    <span class="s-str">"steering applied"</span>,
+        <span class="s-str">"supi"</span>:      req.SUPI,
+        <span class="s-str">"targetUpf"</span>: targetUPFName,
+        <span class="s-str">"targetIp"</span>:  req.TargetUPF,
+    })
+}</code></pre>
+        </div>
+        <!-- ── end steering.go ─────────────────────────────────────────── -->
       </section>
 
       <section id="startup">
