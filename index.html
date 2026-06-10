@@ -1,0 +1,1926 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ULCL Dynamic Traffic Steering — free5GC Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0e0e0e;
+      --paper: #f5f2ed;
+      --paper2: #ede9e1;
+      --rule: #d4cfc6;
+      --rule-light: #e8e4dc;
+      --accent: #c84b2f;
+      --accent-pale: #f5e8e4;
+      --blue: #1a4a7a;
+      --blue-pale: #e4ecf5;
+      --green: #2d6b4a;
+      --green-pale: #e3f0ea;
+      --gold: #9a6c1a;
+      --gold-pale: #f5eedc;
+      --muted: #6b6560;
+      --muted2: #9a9590;
+      --code-bg: #1a1814;
+      --code-fg: #e8e4dc;
+      --sidebar-w: 280px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: "DM Sans", sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    img {
+      height: 100%;
+      width: 100%;
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    aside {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--ink);
+      color: var(--paper);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-head {
+      padding: 32px 28px 24px;
+      border-bottom: 1px solid #2a2620;
+    }
+
+    .sidebar-eyebrow {
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .sidebar-title {
+      font-family: "Playfair Display", serif;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.35;
+      color: #f0ece4;
+    }
+
+    .sidebar-meta {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill {
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      padding: 3px 9px;
+      border-radius: 2px;
+      letter-spacing: 0.05em;
+    }
+
+    .pill-red {
+      background: #3a1810;
+      color: #e8876a;
+    }
+
+    .pill-green {
+      background: #0e2318;
+      color: #6ab88a;
+    }
+
+    .pill-blue {
+      background: #0e1c2e;
+      color: #6aaee8;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 20px 0 32px;
+    }
+
+    .nav-chapter {
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #5a5650;
+      padding: 14px 28px 5px;
+    }
+
+    aside a {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 7px 28px;
+      color: #8a8480;
+      text-decoration: none;
+      font-size: 12.5px;
+      font-weight: 400;
+      transition: color 0.15s;
+      border-left: 2px solid transparent;
+      line-height: 1.45;
+    }
+
+    aside a:hover {
+      color: #d4cfc6;
+      border-left-color: #3a3630;
+    }
+
+    aside a.active {
+      color: #f0ece4;
+      border-left-color: var(--accent);
+    }
+
+    .nav-num {
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      color: #3a3630;
+      flex-shrink: 0;
+      width: 14px;
+    }
+
+    aside a.active .nav-num {
+      color: #7a4030;
+    }
+
+    .sidebar-foot {
+      padding: 20px 28px;
+      border-top: 1px solid #1e1c18;
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      color: #3a3630;
+      letter-spacing: 0.06em;
+    }
+
+    #ue-table-card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 12px;
+      width: 100%;
+      background: #f9f9f9;
+      box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.05);
+      margin-top: 1em;
+      font-family: "DM Mono", monospace;
+    }
+
+    main {
+      flex: 1;
+      min-width: 0;
+      max-width: 1100px;
+      padding: 0;
+    }
+
+    .hero {
+      padding: 64px 88px 52px;
+      border-bottom: 2px solid var(--ink);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-kicker {
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hero-kicker::before {
+      content: "";
+      display: block;
+      width: 28px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .hero h1 {
+      font-family: "Playfair Display", serif;
+      font-size: 46px;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+      color: var(--ink);
+      margin-bottom: 20px;
+      max-width: 700px;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero-desc {
+      font-size: 15.5px;
+      color: var(--muted);
+      max-width: 620px;
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+
+    .hero-tags {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-family: "DM Mono", monospace;
+      font-size: 10.5px;
+      padding: 4px 12px;
+      border: 1px solid;
+      border-radius: 2px;
+      letter-spacing: 0.05em;
+    }
+
+    .tag-red {
+      color: var(--accent);
+      border-color: #e8b4a8;
+      background: var(--accent-pale);
+    }
+
+    .tag-blue {
+      color: var(--blue);
+      border-color: #b4cce0;
+      background: var(--blue-pale);
+    }
+
+    .tag-green {
+      color: var(--green);
+      border-color: #b4d4c4;
+      background: var(--green-pale);
+    }
+
+    section {
+      padding: 52px 88px;
+      border-bottom: 1px solid var(--rule);
+      scroll-margin-top: 24px;
+      animation: fadeIn 0.4s ease both;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .section-num {
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      color: var(--muted2);
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    .section-rule {
+      flex: 1;
+      height: 1px;
+      background: var(--rule);
+    }
+
+    h2 {
+      font-family: "Playfair Display", serif;
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.2;
+      margin-bottom: 20px;
+    }
+
+    h3 {
+      font-family: "DM Sans", sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 32px 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h3::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--rule-light);
+    }
+
+    p {
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    code {
+      font-family: "DM Mono", monospace;
+      font-size: 12px;
+      background: var(--paper2);
+      border: 1px solid var(--rule);
+      padding: 1px 6px;
+      border-radius: 2px;
+      color: var(--accent);
+    }
+
+    .vm-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+
+    .vm-table thead tr {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .vm-table thead th {
+      padding: 10px 16px;
+      text-align: left;
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .vm-table tbody tr {
+      border-bottom: 1px solid var(--rule-light);
+      transition: background 0.12s;
+    }
+
+    .vm-table tbody tr:hover {
+      background: var(--paper2);
+    }
+
+    .vm-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .vm-table td {
+      padding: 11px 16px;
+      vertical-align: top;
+    }
+
+    .vm-table td:first-child {
+      font-family: "DM Mono", monospace;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--blue);
+    }
+
+    .vm-table td:nth-child(2) {
+      font-family: "DM Mono", monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .vm-table td:last-child {
+      color: var(--muted);
+    }
+
+    .vm-table-wrap {
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+
+    .path-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .path-item {
+      padding: 18px 20px;
+      border-radius: 4px;
+      border: 1px solid;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .path-item::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+    }
+
+    .path-default {
+      border-color: #b4cce0;
+      background: var(--blue-pale);
+    }
+
+    .path-default::before {
+      background: var(--blue);
+    }
+
+    .path-steered {
+      border-color: #e8b4a8;
+      background: var(--accent-pale);
+    }
+
+    .path-steered::before {
+      background: var(--accent);
+    }
+
+    .path-badge {
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .path-default .path-badge {
+      color: var(--blue);
+    }
+
+    .path-steered .path-badge {
+      color: var(--accent);
+    }
+
+    .path-route {
+      font-family: "DM Mono", monospace;
+      font-size: 11.5px;
+      color: var(--ink);
+      line-height: 1.8;
+      margin-bottom: 10px;
+    }
+
+    .path-arrow {
+      color: var(--muted2);
+      margin: 0 2px;
+    }
+
+    .path-trigger {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .code-wrap {
+      margin: 16px 0;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #2a2620;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .code-bar {
+      background: #141210;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 16px;
+      border-bottom: 1px solid #2a2620;
+    }
+
+    .code-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .code-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .code-dots span:nth-child(1) {
+      background: #3a1a1a;
+    }
+
+    .code-dots span:nth-child(2) {
+      background: #2a2a1a;
+    }
+
+    .code-dots span:nth-child(3) {
+      background: #1a2a1a;
+    }
+
+    .code-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .code-lang {
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      color: #6a6460;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .code-file {
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      color: #8a8480;
+    }
+
+    .copy-btn {
+      background: #1e1c18;
+      border: 1px solid #3a3630;
+      color: #6a6460;
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      padding: 3px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      color: #c4c0bc;
+      border-color: #5a5650;
+    }
+
+    .copy-btn.copied {
+      color: #6aaa80;
+      border-color: #2a4a38;
+    }
+
+    pre {
+      background: var(--code-bg);
+      padding: 20px 22px;
+      overflow-x: auto;
+      font-family: "DM Mono", monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      color: #c8c4bc;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    .s-comment {
+      color: #4a4840;
+      font-style: italic;
+    }
+
+    .s-key {
+      color: #6aaee8;
+    }
+
+    .s-str {
+      color: #8acea8;
+    }
+
+    .s-num {
+      color: #e8a86a;
+    }
+
+    .s-kw {
+      color: #c88ae8;
+    }
+
+    .s-type {
+      color: #5ac8d0;
+    }
+
+    .s-fn {
+      color: #e8d06a;
+    }
+
+    .s-op {
+      color: #6a6860;
+    }
+
+    .s-add {
+      color: #6aaa80;
+    }
+
+    .s-del {
+      color: #c86a6a;
+    }
+
+    .diff-wrap {
+      margin: 16px 0;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #2a2620;
+    }
+
+    .diff-bar {
+      background: #141210;
+      padding: 9px 16px;
+      border-bottom: 1px solid #2a2620;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .diff-title {
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      color: #6a6460;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .diff-file-label {
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      color: #8a8480;
+    }
+
+    .diff-body {
+      background: var(--code-bg);
+    }
+
+    .diff-line {
+      display: flex;
+      align-items: baseline;
+      padding: 2px 16px;
+      font-family: "DM Mono", monospace;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .diff-gutter {
+      width: 18px;
+      flex-shrink: 0;
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .diff-del-line {
+      background: rgba(200, 80, 80, 0.08);
+    }
+
+    .diff-del-line .diff-gutter {
+      color: #c86a6a;
+    }
+
+    .diff-del-line .diff-text {
+      color: #c89a9a;
+    }
+
+    .diff-add-line {
+      background: rgba(80, 170, 100, 0.08);
+    }
+
+    .diff-add-line .diff-gutter {
+      color: #6aaa80;
+    }
+
+    .diff-add-line .diff-text {
+      color: #8ac8a0;
+    }
+
+    .diff-ctx-line .diff-gutter {
+      color: transparent;
+    }
+
+    .diff-ctx-line .diff-text {
+      color: #4a4840;
+    }
+
+    .callout {
+      display: flex;
+      gap: 14px;
+      padding: 16px 18px;
+      border-radius: 4px;
+      border-left: 3px solid;
+      margin: 20px 0;
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+
+    .callout-icon {
+      font-size: 15px;
+      flex-shrink: 0;
+      line-height: 1.6;
+    }
+
+    .callout-body strong {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 3px;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+    }
+
+    .callout-error {
+      background: #fdf0ee;
+      border-color: var(--accent);
+    }
+
+    .callout-error .callout-body {
+      color: #8a3020;
+    }
+
+    .callout-error .callout-body strong {
+      color: var(--accent);
+    }
+
+    .callout-warn {
+      background: #fdf7ec;
+      border-color: var(--gold);
+    }
+
+    .callout-warn .callout-body {
+      color: #7a5010;
+    }
+
+    .callout-warn .callout-body strong {
+      color: var(--gold);
+    }
+
+    .callout-info {
+      background: var(--blue-pale);
+      border-color: var(--blue);
+    }
+
+    .callout-info .callout-body {
+      color: #1a3a6a;
+    }
+
+    .callout-info .callout-body strong {
+      color: var(--blue);
+    }
+
+    .callout-success {
+      background: var(--green-pale);
+      border-color: var(--green);
+    }
+
+    .callout-success .callout-body {
+      color: #1a4a30;
+    }
+
+    .callout-success .callout-body strong {
+      color: var(--green);
+    }
+
+    .steps {
+      margin: 20px 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 0;
+      position: relative;
+    }
+
+    .step-spine {
+      width: 44px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .step-circle {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      font-weight: 500;
+      flex-shrink: 0;
+      z-index: 1;
+      position: relative;
+    }
+
+    .step-line {
+      width: 1px;
+      flex: 1;
+      background: var(--rule);
+      margin: 3px 0;
+      min-height: 20px;
+    }
+
+    .step:last-child .step-line {
+      display: none;
+    }
+
+    .step-body {
+      flex: 1;
+      padding: 4px 0 28px 14px;
+    }
+
+    .step-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .step-vm {
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      color: var(--muted2);
+      background: var(--paper2);
+      border: 1px solid var(--rule);
+      padding: 1px 8px;
+      border-radius: 2px;
+      letter-spacing: 0.05em;
+    }
+
+    .trouble-item {
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .trouble-q {
+      background: var(--paper2);
+      padding: 13px 18px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--ink);
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .trouble-q::before {
+      content: "Q";
+      font-family: "Playfair Display", serif;
+      font-size: 14px;
+      font-style: italic;
+      color: var(--accent);
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+
+    .trouble-a {
+      padding: 13px 18px;
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .checklist {
+      margin: 20px 0;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--rule-light);
+      font-size: 13.5px;
+    }
+
+    .check-row:last-child {
+      border-bottom: none;
+    }
+
+    .check-mark {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--green);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .check-label {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .check-label strong {
+      color: var(--ink);
+      font-weight: 500;
+      display: block;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--rule);
+      border-radius: 3px;
+    }
+
+    aside::-webkit-scrollbar-thumb {
+      background: #2a2620;
+    }
+
+    @media (max-width: 900px) {
+      aside {
+        display: none;
+      }
+
+      .hero {
+        padding: 40px 40px 36px;
+      }
+
+      section {
+        padding: 40px 40px;
+      }
+
+      .hero h1 {
+        font-size: 34px;
+      }
+
+      .path-card {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="layout">
+    <aside>
+      <div class="sidebar-head">
+        <div class="sidebar-eyebrow">Implementation Guide</div>
+        <div class="sidebar-title">ULCL Dynamic<br />Traffic Steering</div>
+        <div class="sidebar-meta">
+          <span class="pill pill-red">free5GC v3.3.0</span>
+          <span class="pill pill-green">UERANSIM</span>
+          <span class="pill pill-blue">gtp5g v0.8.6</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-chapter">Architecture</div>
+        <a href="#arch"><span class="nav-num">00</span> Topology</a>
+        <a href="#prereqs"><span class="nav-num">02</span> Prerequisites</a>
+        <div class="nav-chapter">Configuration</div>
+        <a href="#smfcfg"><span class="nav-num">03</span> smfcfg.yaml</a>
+        <a href="#uerouting"><span class="nav-num">04</span> uerouting.yaml</a>
+        <div class="nav-chapter">Patches</div>
+        <a href="#gtp5g"><span class="nav-num">05</span> gtp5g Kernel Patch</a>
+        <a href="#smfpatch"><span class="nav-num">06</span> SMF Source Patches</a>
+        <div class="nav-chapter">API &amp; Runtime</div>
+        <a href="#api"><span class="nav-num">07</span> Dynamic Steering API</a>
+        <a href="#startup"><span class="nav-num">08</span> Startup Order</a>
+        <a href="#iptables"><span class="nav-num">09</span> iptables / Routing</a>
+        <a href="#usage"><span class="nav-num">10</span> Using the API</a>
+        <a href="#verify"><span class="nav-num">11</span> Verification</a>
+        <a href="#troubleshoot"><span class="nav-num">12</span> Troubleshooting</a>
+        <div class="nav-chapter">Use Cases</div>
+        <a href="#scenario1"><span class="nav-num">13</span> Scenario 1 &mdash; Invisible Redirect</a>
+        <a href="#scenario2"><span class="nav-num">14</span> Scenario 2 &mdash; ULCL Exhaustion</a>
+        <a href="#scenario3"><span class="nav-num">15</span> Scenario 3 &mdash; Self-Healing Agent</a>
+        <div class="nav-chapter">Multiple UEs</div>
+        <a href="#multiue"><span class="nav-num">16</span> Multi-UE Steering</a>
+        <div class="nav-chapter">References</div>
+        <a href="#links"><span class="nav-num">17</span> Helpful Links</a>
+
+        <!-- <div class="nav-chapter"></div> -->
+        <a href="k8s-guide.html"
+          style="margin-top:12px; color: #5b9cf5; font-weight: 600; letter-spacing: 2px;">Kubernetes ULCL Guide →</a>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="hero" id="top">
+        <div class="hero-kicker">5G Core &middot; User Plane Control</div>
+        <h1>ULCL <em>Dynamic</em><br />Traffic Steering</h1>
+        <p class="hero-desc">This guide demonstrates how to implement Dynamic Traffic Steering in a 5G Core network
+          using the Uplink Classifier (ULCL). With the free5GC framework, it demonstrates how to route user traffic
+          across different Anchor UPFs efficiently, adapting to real-time requirements.</p>
+        <p class="hero-desc">Part of the network topology implementation, we used this <a
+            href="https://github.com/s5uishida/free5gc_ueransim_ulcl_2_sample_config" target="_blank" rel="noopener"
+            style="color: #0F52BA; text-decoration: none;">guide</a> by s5uishida.<br>It describes a simple network
+          topology that uses free5GC and UERANSIM for ULCL with one I-UPF and two PSA-UPFs. We used <a
+            href="https://github.com/free5gc/go-upf" target="_blank" rel="noopener"
+            style="color: #0F52BA; text-decoration: none;">go-upf</a> for the implementation of the UPFs.</p>
+        <div class="hero-tags">
+          <span class="tag tag-red">free5GC v3.3.0</span>
+          <span class="tag tag-blue">UERANSIM</span>
+          <span class="tag tag-green">gtp5g v0.8.6</span>
+        </div>
+      </div>
+
+      <section id="arch">
+        <div class="section-label"><span class="section-num">&sect; 00</span><span class="section-rule"></span></div>
+        <h2>Topology</h2>
+        <div style="text-align:center; margin-bottom:20px;"><img src="images/topology.png" alt="Topology"
+            style="max-width:100%; height:auto; border:1px solid #ccc; border-radius:8px;"></div>
+        <p>The VMs deployed in the setup are listed below:</p>
+        <div class="vm-table-wrap">
+          <table class="vm-table">
+            <thead>
+              <tr>
+                <th>VM</th>
+                <th>IP Address</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>free5gc-core</td>
+                <td>10.160.101.137</td>
+                <td>5G Core (AMF, SMF, PCF, UDM, NRF, &hellip;)</td>
+              </tr>
+              <tr>
+                <td>ueransim-gnb</td>
+                <td>10.160.101.120</td>
+                <td>gNB simulator (UERANSIM)</td>
+              </tr>
+              <tr>
+                <td>ueransim-ue</td>
+                <td>10.160.101.121</td>
+                <td>UE simulator (UERANSIM)</td>
+              </tr>
+              <tr>
+                <td>i-upf</td>
+                <td>10.160.101.143</td>
+                <td>Intermediate / Branching UPF (ULCL node)</td>
+              </tr>
+              <tr>
+                <td>psa-upf</td>
+                <td>10.160.101.148</td>
+                <td>PSA anchor UPF 1 &mdash; default path</td>
+              </tr>
+              <tr>
+                <td>psa-upf2</td>
+                <td>10.160.101.198</td>
+                <td>PSA anchor UPF 2 &mdash; steered path</td>
+              </tr>
+              <tr>
+                <td>server</td>
+                <td>10.160.101.145</td>
+                <td>Server / Data Network</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="ue-card-table" id="ue-table-card" style="background-color: #fffcf212; padding: 8px 0 0 0;">
+          <h4 style="margin:0 0 8px 0; font-size:1em; color:black; letter-spacing:0.5px; padding-left:0.6vw;">UE Details
+          </h4>
+          <div class="vm-table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0;">
+            <table class="vm-table" style="margin:0; min-width: 400px;">
+              <thead>
+                <tr>
+                  <th>UE</th>
+                  <th>IMSI</th>
+                  <th>DNN</th>
+                  <th>OP/OPc</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>UE</td>
+                  <td>208930000000001</td>
+                  <td>internet</td>
+                  <td>OPc</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <h3>Traffic Paths</h3>
+        <div class="path-card">
+          <div class="path-item path-default">
+            <div class="path-badge">Path A &mdash; Default</div>
+            <div class="path-route">UE <span class="path-arrow">&rarr;</span> gNB <span class="path-arrow">&rarr;</span>
+              I-UPF <span class="path-arrow">&rarr;</span> PSA-UPF <span class="path-arrow">&rarr;</span> Server</div>
+            <div class="path-trigger">Trigger: All traffic (catch-all)</div>
+          </div>
+          <div class="path-item path-steered">
+            <div class="path-badge">Path B &mdash; Steered</div>
+            <div class="path-route">UE <span class="path-arrow">&rarr;</span> gNB <span class="path-arrow">&rarr;</span>
+              I-UPF <span class="path-arrow">&rarr;</span> PSA-UPF2 <span class="path-arrow">&rarr;</span> Server</div>
+            <div class="path-trigger">Trigger: <code>10.160.101.145/32</code> or dynamic API call</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="prereqs">
+        <div class="section-label"><span class="section-num">&sect; 02</span><span class="section-rule"></span></div>
+        <h2>Prerequisites</h2>
+        <p>Required software versions for all VMs.</p>
+        <div class="vm-table-wrap">
+          <table class="vm-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Version</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>free5GC</td>
+                <td>v3.3.0</td>
+                <td>With SMF source patches (Section 6)</td>
+              </tr>
+              <tr>
+                <td>UERANSIM</td>
+                <td>latest</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>gtp5g</td>
+                <td>v0.8.6</td>
+                <td>With kernel patch (Section 5) &mdash; required on all UPF VMs</td>
+              </tr>
+              <tr>
+                <td>Go</td>
+                <td>1.21+</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Ubuntu</td>
+                <td>20.04 / 22.04</td>
+                <td>All VMs</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Build gogtp5g-tunnel</h3>
+        <p>Run on I-UPF and PSA-UPF VMs only.</p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span><span class="code-file">i-upf &amp; psa-upf</span>
+            </div><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-comment"># Run on I-UPF and PSA-UPF VMs</span>
+git clone https://github.com/free5gc/go-gtp5gnl ~/go-gtp5gnl
+cd ~/go-gtp5gnl/cmd/gogtp5g-tunnel
+go build .</code></pre>
+        </div>
+        <div class="callout callout-info"><span class="callout-icon">&#9432;</span>
+          <div class="callout-body"><strong>PSA-UPF2 note</strong>PSA-UPF2 does not need <code>gogtp5g-tunnel</code>
+            unless actively debugging.</div>
+        </div>
+      </section>
+
+      <section id="smfcfg">
+        <div class="section-label"><span class="section-num">&sect; 03</span><span class="section-rule"></span></div>
+        <h2>SMF Configuration</h2>
+        <p>File: <code>/home/localadmin/free5gc/config/smfcfg.yaml</code> — see the full document for the complete YAML.
+          Key points:</p>
+        <div class="callout callout-error"><span class="callout-icon">&#10005;</span>
+          <div class="callout-body"><strong>PSA-UPF2 requires a dummy IP pool</strong>Without a pool (e.g.
+            <code>10.61.0.0/16</code>), <code>ActivateTunnelAndPDR()</code> panics.
+          </div>
+        </div>
+        <div class="callout callout-error"><span class="callout-icon">&#10005;</span>
+          <div class="callout-body"><strong>I-UPF must have no pools</strong>It is a branching node only.</div>
+        </div>
+        <div class="callout callout-warn"><span class="callout-icon">&#9888;</span>
+          <div class="callout-body"><strong>go-upf does not support N6 in ifList</strong>Only declare N3/N9 in
+            <code>upfcfg.yaml</code>. N6 is only used in <code>smfcfg.yaml</code>.
+          </div>
+        </div>
+        <h3>smfcfg.yaml</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">yaml</span><span class="code-file">config/smfcfg.yaml</span>
+            </div><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>info:
+  version: 1.0.7
+  description: SMF initial local configuration
+
+configuration:
+  smfName: SMF # the name of this SMF
+
+  # Service-based interface information
+  sbi:
+    scheme: http # the protocol for sbi (http or https)
+    registerIPv4: 127.0.0.2 # IP used to register to NRF
+    bindingIPv4: 127.0.0.2 # IP used to bind the service
+    port: 8000 # Port used to bind the service
+    tls: # the local path of TLS key
+      key: cert/smf.key # SMF TLS Certificate
+      pem: cert/smf.pem # SMF TLS Private key
+
+  # the SBI services provided by this SMF, refer to TS 29.502
+  serviceNameList:
+    - nsmf-pdusession # Nsmf_PDUSession service
+    - nsmf-event-exposure # Nsmf_EventExposure service
+    - nsmf-oam # OAM service
+
+  # the S-NSSAI list supported by this AMF
+  snssaiInfos:
+    - sNssai:
+        sst: 1
+        sd: 010203
+      dnnInfos:
+        - dnn: internet
+          dns:
+            ipv4: 8.8.8.8
+            ipv6: 2001:4860:4860::8888
+
+  # Optional: PLMN IDs configuration.
+  plmnList:
+    - mcc: 208 # Mobile Country Code (3 digits string, digit: 0~9)
+      mnc: 93 # Mobile Network Code (2 or 3 digits string, digit: 0~9)
+  locality: area1
+
+  # PFCP configuration for N4 interface.
+  pfcp:
+    nodeID: 10.160.101.137 # the Node ID of this SMF
+    listenAddr: 10.160.101.137 # the IP/FQDN of N4 interface on this SMF (PFCP)
+    externalAddr: 10.160.101.137 # the IP/FQDN of N4 interface on this SMF (PFCP)
+    assocFailAlertInterval: 10s
+    assocFailRetryInterval: 30s
+    heartbeatInterval: 10s
+
+  # Userplane nodes information, specifying details for AN and UPF.
+  userplaneInformation:
+    upNodes:
+      gNB1:
+        type: AN
+      I-UPF:
+        type: UPF
+        nodeID: 10.160.101.143
+        addr: 10.160.101.143
+        sNssaiUpfInfos:
+          - sNssai:
+              sst: 1
+              sd: 010203
+            dnnUpfInfoList:
+              - dnn: internet
+        interfaces:
+          - interfaceType: N3
+            endpoints:
+              - 10.160.101.143
+            networkInstances:
+              - internet
+          - interfaceType: N9
+            endpoints:
+              - 10.160.101.143
+            networkInstances:
+              - internet
+      PSA-UPF:
+        type: UPF
+        nodeID: 10.160.101.148
+        addr: 10.160.101.148
+        sNssaiUpfInfos:
+          - sNssai:
+              sst: 1
+              sd: 010203
+            dnnUpfInfoList:
+              - dnn: internet
+                pools:
+                  - cidr: 10.61.0.0/16
+                staticPools:
+                  - cidr: 10.60.100.0/16
+        interfaces:
+          - interfaceType: N9
+            endpoints:
+              - 10.160.101.148
+            networkInstances:
+              - internet
+      PSA-UPF2:
+        type: UPF
+        nodeID: 10.160.101.198
+        addr: 10.160.101.198
+        sNssaiUpfInfos:
+          - sNssai:
+              sst: 1
+              sd: 010203
+            dnnUpfInfoList:
+              - dnn: internet
+        interfaces:
+          - interfaceType: N9
+            endpoints:
+              - 10.160.101.198
+            networkInstances:
+              - internet
+    links:
+      - A: gNB1
+        B: I-UPF
+      - A: I-UPF
+        B: PSA-UPF
+      - A: I-UPF
+        B: PSA-UPF2
+
+  ulcl: true
+
+  t3591:
+    enable: true
+    expireTime: 16s
+    maxRetryTimes: 3
+
+  t3592:
+    enable: true
+    expireTime: 16s
+    maxRetryTimes: 3
+
+  nrfUri: http://127.0.0.10:8000
+  nrfCertPem: cert/nrf.pem
+  urrPeriod: 30
+  urrThreshold: 500000
+  requestedUnit: 1000
+
+logger:
+  enable: true
+  level: debug
+  reportCaller: true</code></pre>
+        </div>
+      </section>
+
+      <section id="uerouting">
+        <div class="section-label"><span class="section-num">&sect; 04</span><span class="section-rule"></span></div>
+        <h2>UE Routing</h2>
+        <p>File: <code>/home/localadmin/free5gc/config/uerouting.yaml</code></p>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">yaml</span><span
+                class="code-file">config/uerouting.yaml</span></div><button class="copy-btn"
+              onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>ueRoutingInfo:
+  UE1:
+    members:
+    - imsi-208930000000001
+    topology:
+      - A: gNB1
+        B: I-UPF
+      - A: I-UPF
+        B: PSA-UPF
+    specificPath:
+      - dest: 10.160.101.145/32
+        path: [I-UPF, PSA-UPF]
+      - dest: 10.160.101.145/32
+        path: [I-UPF, PSA-UPF2]
+      - dest: 8.8.8.8/32
+        path: [I-UPF]</code></pre>
+        </div>
+        <div class="callout callout-warn"><span class="callout-icon">&#9888;</span>
+          <div class="callout-body"><strong>specificPath must start with I-UPF</strong>Required so
+            <code>FindULCL()</code> identifies the branching point.
+          </div>
+        </div>
+      </section>
+
+      <section id="gtp5g">
+        <div class="section-label"><span class="section-num">&sect; 05</span><span class="section-rule"></span></div>
+        <h2>gtp5g Kernel Module Patch</h2>
+        <p>Apply on every UPF VM: <strong>I-UPF, PSA-UPF, and PSA-UPF2</strong>.</p>
+        <div class="callout callout-error"><span class="callout-icon">&#10005;</span>
+          <div class="callout-body"><strong>Problem</strong>The kernel module drops packets with "No PDR match" because
+            the UE address check only tests the source IP, failing on the downlink direction.</div>
+        </div>
+        <h3>Patch &mdash; pdr.c (~line 308)</h3>
+        <div class="diff-wrap">
+          <div class="diff-bar"><span class="diff-title">PDR UE Address Check</span><span
+              class="diff-file-label">~/gtp5g/src/pfcp/pdr.c</span></div>
+          <div class="diff-body">
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">if
+                (pdi->ue_addr_ipv4)</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text"> if
+                (!(pdr->af == AF_INET &amp;&amp; target_addr &amp;&amp; *target_addr == pdi->ue_addr_ipv4->s_addr))
+                continue;</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">if
+                (pdi->ue_addr_ipv4)</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text"> if
+                (!(pdr->af == AF_INET &amp;&amp; target_addr &amp;&amp; (*target_addr == pdi->ue_addr_ipv4->s_addr ||
+                iph->daddr == pdi->ue_addr_ipv4->s_addr))) continue;</span></div>
+          </div>
+        </div>
+        <h3>Rebuild and Reload</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+              onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>cd ~/gtp5g && make clean && make
+sudo cp ~/gtp5g/gtp5g.ko /lib/modules/$(uname -r)/kernel/drivers/net/gtp5g.ko
+sudo rmmod gtp5g 2>/dev/null && sudo modprobe gtp5g
+lsmod | grep gtp5g</code></pre>
+        </div>
+      </section>
+
+      <section id="smfpatch">
+        <div class="section-label"><span class="section-num">&sect; 06</span><span class="section-rule"></span></div>
+        <h2>SMF Source Code Patches</h2>
+        <p>Three Go source patches fixing bugs in free5GC v3.3.0 that prevent ULCL from working correctly.</p>
+        <h3>Patch 1 &mdash; Fix PSA2 N3 Interface Check</h3>
+        <div class="diff-wrap">
+          <div class="diff-bar"><span class="diff-title">SelectPSA2() &mdash; N3 requirement</span><span
+              class="diff-file-label">context/bp_manager.go</span></div>
+          <div class="diff-body">
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">if
+                upf.N3Interfaces != nil &amp;&amp; upf.N9Interfaces != nil {</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">if
+                upf.N9Interfaces != nil {</span></div>
+          </div>
+        </div>
+        <h3>Patch 2 &mdash; Fix FindULCL Nil Pointer</h3>
+        <div class="diff-wrap">
+          <div class="diff-bar"><span class="diff-title">FindULCL() &mdash; nil guard</span><span
+              class="diff-file-label">context/bp_manager.go</span></div>
+          <div class="diff-body">
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text">// Inside the
+                branching point search loop:</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">if
+                psa1CurDPNode == nil { break }</span></div>
+          </div>
+        </div>
+        <h3>Patch 3 &mdash; Fix SDF Filter Direction</h3>
+        <div class="diff-wrap">
+          <div class="diff-bar"><span class="diff-title">Uplink SDF filter Src/Dst &mdash; fix at BOTH
+              occurrences</span><span class="diff-file-label">processor/ulcl_procedure.go (~line 222 &amp; ~line
+              381)</span></div>
+          <div class="diff-body">
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span
+                class="diff-text">FlowDespcription.Src = dest.DestinationIP</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span
+                class="diff-text">FlowDespcription.Dst = smContext.PDUAddress.To4().String()</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span
+                class="diff-text">FlowDespcription.Src = smContext.PDUAddress.To4().String()</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span
+                class="diff-text">FlowDespcription.DstPorts = dstPort</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span
+                class="diff-text">FlowDespcription.Dst = dest.DestinationIP</span></div>
+          </div>
+        </div>
+        <h3>Rebuild SMF</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+              onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>cd ~/free5gc/NFs/smf
+go build ./...
+go build -o ~/free5gc/bin/smf ./cmd/</code></pre>
+        </div>
+      </section>
+
+      <section id="api">
+        <div class="section-label"><span class="section-num">&sect; 07</span><span class="section-rule"></span></div>
+        <h2>Dynamic Steering API</h2>
+        <p>REST endpoint on the SMF that triggers live path switching via PFCP Session Modification.</p>
+        <h3>api_steering.go</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">go</span><span class="code-file">sbi/api_steering.go</span>
+            </div><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-kw">package</span> <span class="s-type">sbi</span>
+
+<span class="s-kw">import</span> (
+    <span class="s-str">"net/http"</span>
+    <span class="s-str">"github.com/gin-gonic/gin"</span>
+)
+
+<span class="s-kw">func</span> (s *<span class="s-type">Server</span>) <span class="s-fn">getSteeringRoutes</span>() []<span class="s-type">Route</span> {
+    <span class="s-kw">return</span> []<span class="s-type">Route</span>{
+        { Name: <span class="s-str">"Steer Traffic"</span>, Method: http.<span class="s-num">MethodPost</span>, Pattern: <span class="s-str">"/steer"</span>, APIFunc: s.<span class="s-fn">HTTPSteerTraffic</span> },
+    }
+}
+
+<span class="s-kw">func</span> (s *<span class="s-type">Server</span>) <span class="s-fn">HTTPSteerTraffic</span>(c *<span class="s-type">gin.Context</span>) {
+    s.<span class="s-fn">Processor</span>().<span class="s-fn">HandleSteerTraffic</span>(c)
+}</code></pre>
+        </div>
+        <h3>steering.go</h3>
+        <div class="callout callout-info" style="margin-top:0"><span class="callout-icon">&#9432;</span>
+          <div class="callout-body"><strong>New file &mdash; created from scratch</strong>
+            Lives at <code>NFs/smf/internal/sbi/processor/steering.go</code>.
+            Implements <code>HandleSteerTraffic</code>, the handler wired up by <code>api_steering.go</code>
+            above.
+            Contains two key bug-fixes required for multi-UE operation — see &sect;&nbsp;16 for full diffs
+            and root-cause analysis.
+          </div>
+        </div>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">go</span><span
+                class="code-file">NFs/smf/internal/sbi/processor/steering.go</span>
+            </div><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="s-kw">package</span> <span class="s-type">processor</span>
+
+<span class="s-kw">import</span> (
+    <span class="s-str">"fmt"</span>
+    <span class="s-str">"net/http"</span>
+    <span class="s-str">"github.com/free5gc/openapi/models"</span>
+    pfcpType <span class="s-str">"github.com/free5gc/pfcp/pfcpType"</span>
+    <span class="s-str">"github.com/free5gc/smf/internal/context"</span>
+    smf_context <span class="s-str">"github.com/free5gc/smf/internal/context"</span>
+    <span class="s-str">"github.com/gin-gonic/gin"</span>
+)
+
+<span class="s-kw">type</span> <span class="s-type">SteerRequest</span> <span class="s-kw">struct</span> {
+    SUPI      <span class="s-type">string</span> `json:<span class="s-str">"supi"</span>`
+    PDUSessID <span class="s-type">int32</span>  `json:<span class="s-str">"pduSessId"</span>`
+    TargetUPF <span class="s-type">string</span> `json:<span class="s-str">"targetUpf"</span>`
+}
+
+<span class="s-kw">func</span> (p *<span class="s-type">Processor</span>) <span class="s-fn">HandleSteerTraffic</span>(c *<span class="s-type">gin.Context</span>) {
+    <span class="s-kw">var</span> req <span class="s-type">SteerRequest</span>
+    <span class="s-kw">if</span> err := c.<span class="s-fn">ShouldBindJSON</span>(&amp;req); err != <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusBadRequest, gin.H{<span class="s-str">"error"</span>: err.<span class="s-fn">Error</span>()})
+        <span class="s-kw">return</span>
+    }
+    <span class="s-kw">if</span> req.PDUSessID == <span class="s-num">0</span> { req.PDUSessID = <span class="s-num">1</span> }
+
+    smContext := smf_context.<span class="s-fn">GetSMContextById</span>(req.SUPI, req.PDUSessID)
+    <span class="s-kw">if</span> smContext == <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusNotFound, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"SMContext not found"</span>, <span class="s-str">"supi"</span>: req.SUPI})
+        <span class="s-kw">return</span>
+    }
+
+    upi := smf_context.<span class="s-fn">GetUserPlaneInformation</span>()
+    targetUPNode := upi.<span class="s-fn">GetUPFNodeByIP</span>(req.TargetUPF)
+    <span class="s-kw">if</span> targetUPNode == <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusNotFound, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"Target UPF not found"</span>, <span class="s-str">"targetUpf"</span>: req.TargetUPF})
+        <span class="s-kw">return</span>
+    }
+    targetUPF := targetUPNode.UPF
+    targetUPFName := upi.<span class="s-fn">GetUPFNameByIp</span>(req.TargetUPF)
+
+    smContext.SMLock.<span class="s-fn">Lock</span>()
+    <span class="s-kw">defer</span> smContext.SMLock.<span class="s-fn">Unlock</span>()
+
+    iface := targetUPF.<span class="s-fn">GetInterface</span>(models.UpInterfaceType_N9, smContext.Dnn)
+    <span class="s-kw">if</span> iface == <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"Target UPF has no N9 interface"</span>})
+        <span class="s-kw">return</span>
+    }
+    targetIP, err := iface.<span class="s-fn">IP</span>(smContext.SelectedPDUSessionType)
+    <span class="s-kw">if</span> err != <span class="s-kw">nil</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{<span class="s-str">"error"</span>: fmt.<span class="s-fn">Sprintf</span>(<span class="s-str">"Cannot get target UPF IP: %v"</span>, err)})
+        <span class="s-kw">return</span>
+    }
+
+    <span class="s-kw">var</span> ulcfNodes []*<span class="s-type">context.DataPathNode</span>
+    <span class="s-kw">for</span> _, dp := <span class="s-kw">range</span> smContext.Tunnel.DataPathPool {
+        <span class="s-kw">if</span> dp.IsDefaultPath { <span class="s-kw">continue</span> }
+        <span class="s-kw">for</span> node := dp.FirstDPNode; node != <span class="s-kw">nil</span>; node = node.<span class="s-fn">Next</span>() {
+            <span class="s-kw">if</span> node.UpLinkTunnel == <span class="s-kw">nil</span> || node.UpLinkTunnel.PDR == <span class="s-kw">nil</span> { <span class="s-kw">continue</span> }
+            pdr := node.UpLinkTunnel.PDR
+            <span class="s-kw">if</span> pdr.PDI.SDFFilter == <span class="s-kw">nil</span> || pdr.FAR == <span class="s-kw">nil</span> ||
+               pdr.FAR.ForwardingParameters == <span class="s-kw">nil</span> ||
+               pdr.FAR.ForwardingParameters.OuterHeaderCreation == <span class="s-kw">nil</span> { <span class="s-kw">continue</span> }
+            ulcfNodes = <span class="s-fn">append</span>(ulcfNodes, node)
+        }
+    }
+    <span class="s-kw">if</span> <span class="s-fn">len</span>(ulcfNodes) == <span class="s-num">0</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"no ULCL steering FAR found pointing to old UPF"</span>})
+        <span class="s-kw">return</span>
+    }
+
+    <span class="s-kw">var</span> pdrList []*<span class="s-type">context.PDR</span>
+    <span class="s-kw">var</span> farList []*<span class="s-type">context.FAR</span>
+    debugFARs := <span class="s-str">""</span>
+    <span class="s-kw">for</span> _, node := <span class="s-kw">range</span> ulcfNodes {
+        ulFAR := node.UpLinkTunnel.PDR.FAR
+        <span class="s-kw">if</span> ulFAR == <span class="s-kw">nil</span> || ulFAR.ForwardingParameters == <span class="s-kw">nil</span> { <span class="s-kw">continue</span> }
+        existingTEID := <span class="s-type">uint32</span>(<span class="s-num">0</span>)
+        <span class="s-kw">if</span> ulFAR.ForwardingParameters.OuterHeaderCreation != <span class="s-kw">nil</span> {
+            existingTEID = ulFAR.ForwardingParameters.OuterHeaderCreation.Teid
+        }
+        ulFAR.ForwardingParameters.OuterHeaderCreation = &amp;pfcpType.<span class="s-type">OuterHeaderCreation</span>{
+            OuterHeaderCreationDescription: pfcpType.OuterHeaderCreationGtpUUdpIpv4,
+            Ipv4Address:                    targetIP,
+            Teid:                           existingTEID,
+        }
+        ulFAR.State = smf_context.RULE_UPDATE
+        pdrList = <span class="s-fn">append</span>(pdrList, node.UpLinkTunnel.PDR)
+        farList = <span class="s-fn">append</span>(farList, ulFAR)
+        debugFARs += fmt.<span class="s-fn">Sprintf</span>(<span class="s-str">"FARID=%d,UPF=%s;"</span>,
+            ulFAR.FARID, node.UPF.NodeID.<span class="s-fn">ResolveNodeIdToIp</span>().<span class="s-fn">String</span>())
+    }
+    <span class="s-kw">if</span> <span class="s-fn">len</span>(farList) == <span class="s-num">0</span> {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{<span class="s-str">"error"</span>: <span class="s-str">"no valid FARs to update"</span>})
+        <span class="s-kw">return</span>
+    }
+    c.<span class="s-fn">Header</span>(<span class="s-str">"X-Debug-FAR"</span>, debugFARs)
+
+    iUPFNode := ulcfNodes[<span class="s-num">0</span>]
+    resChan := <span class="s-fn">make</span>(<span class="s-kw">chan</span> <span class="s-type">SendPfcpResult</span>, <span class="s-num">1</span>)
+    pfcpState := &amp;<span class="s-type">PFCPState</span>{
+        upf:     iUPFNode.UPF,
+        pdrList: pdrList,
+        farList: farList,
+        barList: []*<span class="s-type">context.BAR</span>{},
+        qerList: <span class="s-kw">nil</span>,
+        urrList: <span class="s-kw">nil</span>,
+    }
+    <span class="s-kw">go</span> <span class="s-fn">modifyExistingPfcpSession</span>(smContext, pfcpState, resChan, <span class="s-str">""</span>)
+    result := &lt;-resChan
+    <span class="s-fn">close</span>(resChan)
+
+    <span class="s-kw">if</span> result.Err != <span class="s-kw">nil</span> || result.Status != smf_context.SessionUpdateSuccess {
+        c.<span class="s-fn">JSON</span>(http.StatusInternalServerError, gin.H{
+            <span class="s-str">"error"</span>:  fmt.<span class="s-fn">Sprintf</span>(<span class="s-str">"PFCP modification failed: %v"</span>, result.Err),
+            <span class="s-str">"status"</span>: result.Status,
+        })
+        <span class="s-kw">return</span>
+    }
+    smContext.SelectedUPF = targetUPNode
+    c.<span class="s-fn">JSON</span>(http.StatusOK, gin.H{
+        <span class="s-str">"status"</span>:    <span class="s-str">"steering applied"</span>,
+        <span class="s-str">"supi"</span>:      req.SUPI,
+        <span class="s-str">"targetUpf"</span>: targetUPFName,
+        <span class="s-str">"targetIp"</span>:  req.TargetUPF,
+    })
+}</code></pre>
+        </div>
+      </section>
+
+      <section id="startup">
+        <div class="section-label"><span class="section-num">&sect; 08</span><span class="section-rule"></span></div>
+        <h2>Startup Order</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-spine">
+              <div class="step-circle">1</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-body">
+              <div class="step-title">Start I-UPF <span class="step-vm">i-upf</span></div>
+              <div class="code-wrap">
+                <div class="code-bar">
+                  <div class="code-dots"><span></span><span></span><span></span></div>
+                  <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+                    onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><code>sudo ip link delete upfgtp 2>/dev/null
+cd ~/gtp5g/go-upf && sudo ./upf -c upfcfg.yaml &</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-spine">
+              <div class="step-circle">2</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-body">
+              <div class="step-title">Start PSA-UPF <span class="step-vm">psa-upf</span></div>
+              <div class="code-wrap">
+                <div class="code-bar">
+                  <div class="code-dots"><span></span><span></span><span></span></div>
+                  <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+                    onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><code>sudo ip link delete upfgtp 2>/dev/null
+cd ~/gtp5g/go-upf && sudo ./upf -c upfcfg.yaml &</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-spine">
+              <div class="step-circle">3</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-body">
+              <div class="step-title">Start PSA-UPF2 <span class="step-vm">psa-upf2</span></div>
+              <div class="code-wrap">
+                <div class="code-bar">
+                  <div class="code-dots"><span></span><span></span><span></span></div>
+                  <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+                    onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><code>sudo ip link delete upfgtp 2>/dev/null
+cd ~/gtp5g/go-upf && sudo ./upf -c upfcfg.yaml &</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-spine">
+              <div class="step-circle">4</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-body">
+              <div class="step-title">Start Core <span class="step-vm">free5gc-core</span></div>
+              <div class="code-wrap">
+                <div class="code-bar">
+                  <div class="code-dots"><span></span><span></span><span></span></div>
+                  <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+                    onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><code>cd ~/free5gc && ./build.sh</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-spine">
+              <div class="step-circle">5</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-body">
+              <div class="step-title">Start gNB <span class="step-vm">ueransim-gnb</span></div>
+              <div class="code-wrap">
+                <div class="code-bar">
+                  <div class="code-dots"><span></span><span></span><span></span></div>
+                  <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+                    onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><code>cd ~/UERANSIM/build
+sudo ./nr-gnb -c ../config/free5gc-gnb.yaml &</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-spine">
+              <div class="step-circle">6</div>
+            </div>
+            <div class="step-body">
+              <div class="step-title">Start UE and verify <span class="step-vm">ueransim-ue</span></div>
+              <div class="code-wrap">
+                <div class="code-bar">
+                  <div class="code-dots"><span></span><span></span><span></span></div>
+                  <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+                    onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><code>cd ~/UERANSIM/build
+sudo ./nr-ue -c ../config/free5gc-ue.yaml &
+sleep 3 && ping -I uesimtun0 10.160.101.145 -c 3</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="iptables">
+        <div class="section-label"><span class="section-num">&sect; 09</span><span class="section-rule"></span></div>
+        <h2>iptables / Routing Rules</h2>
+        <h3>PSA-UPF (10.160.101.148)</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+              onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>sudo iptables -t nat -A POSTROUTING -s 10.60.0.0/16 -o &lt;N6_IFACE&gt; -j MASQUERADE
+sudo ip route add 10.160.101.145/32 dev &lt;N6_IFACE&gt;</code></pre>
+        </div>
+        <h3>PSA-UPF2 (10.160.101.198)</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+              onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>sudo iptables -t nat -A POSTROUTING -s 10.60.0.0/16 -o &lt;N6_IFACE&gt; -j MASQUERADE
+sudo ip route add 10.160.101.145/32 dev &lt;N6_IFACE&gt;</code></pre>
+        </div>
+        <h3>Server VM</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+              onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>sudo ip route add 10.60.0.0/16 via 10.160.101.148
+sudo ip route add 10.60.0.0/16 via 10.160.101.198 metric 200</code></pre>
+        </div>
+      </section>
+
+      <section id="usage">
+        <div class="section-label"><span class="section-num">&sect; 10</span><span class="section-rule"></span></div>
+        <h2>Using the Dynamic Steering API</h2>
+        <div class="callout callout-info"><span class="callout-icon"></span>
+          <div class="callout-body" style="display:ruby;">The SMF binds to <code>127.0.0.2:8000</code>. All
+            <code>curl</code> commands must be run on the <strong>core VM</strong> with <code>sudo</code>.
+          </div>
+        </div>
+        <h3>Use steer.sh script</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+              onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>./steer.sh 10.160.101.148   <span class="s-comment"># steer to PSA-UPF</span>
+./steer.sh 10.160.101.198   <span class="s-comment"># steer to PSA-UPF2</span></code></pre>
+        </div>
+      </section>
+
+      <section id="verify">
+        <div class="section-label"><span class="section-num">&sect; 11</span><span class="section-rule"></span></div>
+        <h2>Verification Checklist</h2>
+        <div class="checklist">
+          <div class="check-row">
+            <div class="check-mark">&#10003;</div>
+            <div class="check-label"><strong>UE connectivity</strong><code>ping -I uesimtun0 10.160.101.145</code>
+              &mdash; confirm packets flow before steering.</div>
+          </div>
+          <div class="check-row">
+            <div class="check-mark">&#10003;</div>
+            <div class="check-label"><strong>Monitor traffic paths</strong>Run <code>sudo tcpdump -i upfgtp -n</code>
+              simultaneously on both PSA-UPF VMs.</div>
+          </div>
+          <div class="check-row">
+            <div class="check-mark">&#10003;</div>
+            <div class="check-label"><strong>Live path switch</strong>Fire the steering API &mdash; traffic moves
+              immediately with no ping interruption.</div>
+          </div>
+          <div class="check-row">
+            <div class="check-mark">&#10003;</div>
+            <div class="check-label"><strong>No kernel PDR errors</strong><code>sudo dmesg | tail -10</code> &mdash;
+              should NOT contain <code>No PDR match this skb</code>.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="troubleshoot">
+        <div class="section-label"><span class="section-num">&sect; 12</span><span class="section-rule"></span></div>
+        <h2>Troubleshooting</h2>
+        <div class="trouble-item">
+          <div class="trouble-q">SMContext not found &mdash; curl returns 404</div>
+          <div class="trouble-a">The UE is not connected. Reconnect it.</div>
+        </div>
+        <div class="trouble-item">
+          <div class="trouble-q">"No PDR match this skb" in dmesg</div>
+          <div class="trouble-a">The gtp5g kernel patch was not applied or the old module is still loaded.</div>
+        </div>
+        <div class="trouble-item">
+          <div class="trouble-q">"file exists" error on UPF start</div>
+          <div class="trouble-a"><code>sudo ip link delete upfgtp</code></div>
+        </div>
+        <div class="callout callout-success" style="margin-top:28px"><span class="callout-icon">&#10003;</span>
+          <div class="callout-body"><strong>Verified implementation</strong>Live bidirectional switching (PSA-UPF &harr;
+            PSA-UPF2) with no session interruption confirmed on free5GC v3.3.0 with gtp5g v0.8.6.</div>
+        </div>
+      </section>

@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>free5GC ULCL on Kubernetes — Complete Implementation Guide</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #181b24;
+      --surface2: #1e222d;
+      --border: #2a2f3c;
+      --text: #cdd4e0;
+      --text-muted: #8892a6;
+      --heading: #e8ecf4;
+      --accent: #5b9cf5;
+      --accent2: #6ee7b7;
+      --accent3: #f9a86c;
+      --danger: #f87171;
+      --code-bg: #12141c;
+      --code-border: #252a38;
+      --sidebar-w: 280px;
+      --topo-green: #34d399;
+      --topo-blue: #60a5fa;
+      --topo-orange: #fb923c;
+      --topo-purple: #a78bfa;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    nav.sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 0px 16px 24px 16px;
+      z-index: 100;
+    }
+
+    nav.sidebar h2 {
+      font-size: 14px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    nav.sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    nav.sidebar a:hover,
+    nav.sidebar a.active {
+      color: var(--heading);
+      background: var(--surface2);
+    }
+
+    nav.sidebar .sub {
+      padding-left: 18px;
+      font-size: 12px;
+    }
+
+    /* Main */
+    main {
+      margin-left: var(--sidebar-w);
+      max-width: 900px;
+      padding: 48px 48px 120px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 32px;
+      color: var(--heading);
+      font-weight: 800;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+    }
+
+    h2 {
+      font-size: 22px;
+      color: var(--heading);
+      font-weight: 700;
+      margin: 48px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    h3 {
+      font-size: 17px;
+      color: var(--accent2);
+      font-weight: 600;
+      margin: 32px 0 12px;
+    }
+
+    h4 {
+      font-size: 15px;
+      color: var(--accent3);
+      font-weight: 600;
+      margin: 24px 0 8px;
+    }
+
+    p {
+      margin-bottom: 14px;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--code-border);
+      color: var(--accent);
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 6px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      margin: 12px 0 20px;
+      line-height: 1.55;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--text);
+      font-size: 12.5px;
+    }
+
+    .comment {
+      color: #6b7280;
+    }
+
+    .keyword {
+      color: var(--accent);
+    }
+
+    .string {
+      color: var(--accent2);
+    }
+
+    .ip {
+      color: var(--accent3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 10px 14px;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--surface2);
+      color: var(--heading);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td code {
+      font-size: 12px;
+    }
+
+    .callout {
+      padding: 16px 20px;
+      border-radius: 6px;
+      margin: 16px 0 20px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .callout-warn {
+      background: rgba(251, 146, 60, 0.08);
+      border-left: 3px solid var(--accent3);
+    }
+
+    .callout-danger {
+      background: rgba(248, 113, 113, 0.08);
+      border-left: 3px solid var(--danger);
+    }
+
+    .callout-info {
+      background: rgba(91, 156, 245, 0.08);
+      border-left: 3px solid var(--accent);
+    }
+
+    .callout-success {
+      background: rgba(110, 231, 183, 0.08);
+      border-left: 3px solid var(--accent2);
+    }
+
+    .callout strong {
+      color: var(--heading);
+    }
+
+    .topo-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 20px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--text-muted);
+    }
+
+    .topo-box .node-green {
+      color: var(--topo-green);
+      font-weight: 700;
+    }
+
+    .topo-box .node-blue {
+      color: var(--topo-blue);
+      font-weight: 700;
+    }
+
+    .topo-box .node-orange {
+      color: var(--topo-orange);
+      font-weight: 700;
+    }
+
+    .topo-box .node-purple {
+      color: var(--topo-purple);
+      font-weight: 700;
+    }
+
+    .step-num {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 800;
+      font-size: 13px;
+      line-height: 28px;
+      text-align: center;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .diff-add {
+      color: var(--accent2);
+    }
+
+    .diff-del {
+      color: var(--danger);
+      text-decoration: line-through;
+    }
+
+    ul,
+    ol {
+      margin: 10px 0 16px 24px;
+    }
+
+    li {
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-fix {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--danger);
+    }
+
+    .tag-config {
+      background: rgba(91, 156, 245, 0.15);
+      color: var(--accent);
+    }
+
+    .tag-patch {
+      background: rgba(110, 231, 183, 0.15);
+      color: var(--accent2);
+    }
+
+    pre {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+      z-index: 2;
+    }
+
+    pre:hover .copy-btn {
+      opacity: 1;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+
+    .copy-btn.copied {
+      background: var(--accent2);
+      color: var(--bg);
+      border-color: var(--accent2);
+      opacity: 1;
+    }
+
+    @media (max-width: 900px) {
+      nav.sidebar {
+        display: none;
+      }
+
+      main {
+        margin-left: 0;
+        padding: 24px;
+      }
+
+      .copy-btn {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="sidebar">
+    <h2 style="font-size: 24px;">K8s ULCL Guide</h2>
+    <a href="#overview">Overview</a>
+    <a href="#topology">Topology &amp; IPs</a>
+    <a href="#s1" style="margin-top:12px; color:var(--heading); font-weight:600;">Phase 1: Cluster</a>
+    <a href="#s1-kubeadm" class="sub">kubeadm Setup</a>
+    <a href="#s1-cni" class="sub">Flannel + Multus</a>
+    <a href="#s1-registry" class="sub">Local Registry</a>
+    <a href="#s1-helm" class="sub">Helm Deployment</a>
+    <a href="#s2" style="margin-top:12px; color:var(--heading); font-weight:600;">Phase 2: Custom Images</a>
+    <a href="#s2-why" class="sub">Why Patch</a>
+    <a href="#s2-build" class="sub">Building Images</a>
+    <a href="#s2-all-nfs" class="sub">All 8 NFs</a>
+    <a href="#s3" style="margin-top:12px; color:var(--heading); font-weight:600;">Phase 3: Control Plane</a>
+    <a href="#s3-auth" class="sub">Auth Chain</a>
+    <a href="#s3-subscriber" class="sub">Subscriber Data</a>
+    <a href="#s3-ulcl-flag" class="sub">ULCL Flag</a>
+    <a href="#s4" style="margin-top:12px; color:var(--heading); font-weight:600;">Phase 4: Data Plane</a>
+    <a href="#s4-gtp5g" class="sub">gtp5g 0.9.14</a>
+    <a href="#s4-uplink" class="sub">Uplink Path</a>
+    <a href="#s4-downlink" class="sub">Downlink Path</a>
+    <a href="#s4-multiue" class="sub">8 UEs</a>
+    <a href="#s5" style="margin-top:12px; color:var(--heading); font-weight:600;">Phase 5: Steering</a>
+    <a href="#s5-uerouting" class="sub">UE Routing</a>
+    <a href="#s5-smf-patch" class="sub">SMF Source Patch</a>
+    <a href="#s5-script" class="sub">Steering Script</a>
+    <a href="#s5-verify" class="sub">Verification</a>
+    <a href="#s6" style="margin-top:12px; color:var(--heading); font-weight:600;">Phase 6: Agent</a>
+    <a href="#s6-flood" class="sub">Flood Simulator</a>
+    <a href="#s6-agent" class="sub">LSTM Agent</a>
+    <a href="#s6-rebuild" class="sub">Rebuild Script</a>
+    <a href="#s6-demo" class="sub">Full Demo</a>
+    <a href="#s6-kpi" class="sub">KPI Results</a>
+    <a href="#rootcause" style="margin-top:12px; color:var(--heading); font-weight:600;">Root-Cause Chain</a>
+    <a href="#ops" style="margin-top:8px;">Operational Notes</a>
+    <a href="#recovery">Recovery Procedure</a>
+
+    <a href="index.html" style="margin-top:12px; color:var(--accent); font-weight:600; letter-spacing: 2px;">←
+      Bare-Metal ULCL Guide</a>
+
+  </nav>
+
+  <main>
+
+    <!-- ============================================================ -->
+    <h1>free5GC ULCL on <span>Kubernetes</span></h1>
+    <p class="subtitle">
+      Complete implementation guide: from bare-metal kubeadm cluster to verified ULCL traffic steering between PSA-UPFs
+      with 8 UEs.<br>
+      MARE Project · SNS JU Grant 101191436 · NCSR Demokritos · June 2026
+    </p>
+
+    <!-- ============================================================ -->
+    <h2 id="overview">Overview</h2>
+    <p>
+      This guide documents the full process of deploying a custom-patched free5GC v3.3.0 ULCL (Uplink Classifier) 5G
+      core network on a 4-node kubeadm Kubernetes cluster, achieving bidirectional data-plane connectivity for 8 UEs,
+      and implementing dynamic flow steering between two PSA-UPFs (anchor UPFs). The deployment replicates a working
+      bare-metal testbed in a Kubernetes environment for the MARE project's autonomous self-healing research.
+    </p>
+    <p>
+      The work involved building 8 custom-patched NF Docker images from bare-metal binaries, debugging the full
+      authentication chain, upgrading the gtp5g kernel module, resolving macvlan multi-route issues, and patching the
+      SMF Go source code to enable uplink traffic steering. The result is a fully functional ULCL testbed where traffic
+      can be dynamically steered between anchor UPFs via a REST API.
+    </p>
+
+    <!-- ============================================================ -->
+    <h2 id="topology">Topology &amp; IP Addressing</h2>
+
+    <h3>Cluster Nodes</h3>
+    <p>All nodes sit on a flat <code>10.160.101.0/24</code> subnet (Proxmox VMs, interface <code>ens18</code>). Macvlan
+      secondary interfaces provide the 5G N3/N4/N6/N9 networks.</p>
+
+    <table>
+      <tr>
+        <th>Hostname</th>
+        <th>IP (.91–.95)</th>
+        <th>Role</th>
+        <th>K8s Role</th>
+      </tr>
+      <tr>
+        <td>free5gc-k8s</td>
+        <td><code>10.160.101.91</code></td>
+        <td>Control plane, SMF, AMF, core NFs</td>
+        <td>control-plane</td>
+      </tr>
+      <tr>
+        <td>i-upf-k8s</td>
+        <td><code>10.160.101.92</code></td>
+        <td>BranchingUPF / I-UPF (upfb)</td>
+        <td>worker</td>
+      </tr>
+      <tr>
+        <td>psa-upf1-k8s</td>
+        <td><code>10.160.101.93</code></td>
+        <td>AnchorUPF1 / PSA-UPF (upf1)</td>
+        <td>worker</td>
+      </tr>
+      <tr>
+        <td>psa-upf2-k8s</td>
+        <td><code>10.160.101.94</code></td>
+        <td>AnchorUPF2 / PSA-UPF2 (upf2)</td>
+        <td>worker</td>
+      </tr>
+      <tr>
+        <td>gnb-ue-k8s</td>
+        <td><code>10.160.101.95</code></td>
+        <td>UERANSIM gNB + UEs</td>
+        <td><em>not a node</em></td>
+      </tr>
+    </table>
+
+    <h3>UPF Macvlan IP Assignments (Final)</h3>
+    <table>
+      <tr>
+        <th>UPF</th>
+        <th>N3</th>
+        <th>N4 (PFCP)</th>
+        <th>N9</th>
+        <th>N6</th>
+        <th>Pool</th>
+      </tr>
+      <tr>
+        <td>BranchingUPF (upfb)</td>
+        <td><code>.111</code></td>
+        <td><code>.112</code></td>
+        <td><code>.113</code></td>
+        <td><code>.150</code></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>AnchorUPF1 (upf1)</td>
+        <td>—</td>
+        <td><code>.144</code></td>
+        <td><code>.122</code></td>
+        <td><code>.123</code></td>
+        <td><code>10.61.0.0/16</code></td>
+      </tr>
+      <tr>
+        <td>AnchorUPF2 (upf2)</td>
+        <td>—</td>
+        <td><code>.131</code></td>
+        <td><code>.132</code></td>
+        <td><code>.133</code></td>
+        <td><code>10.62.0.0/16</code></td>
+      </tr>
+    </table>
+
+    <p>Control plane: AMF N2 = <code>.100</code>, SMF N4 = <code>.101</code>. Slice: SST=1, SD=010203, DNN=internet.</p>
+
+    <h3>ULCL Data Path</h3>
+    <div class="topo-box"><span class="node-purple">UE (10.61.0.x)</span>
+      │
+      ▼ GTP-U (N3)
+      <span class="node-blue">gNB (.95)</span>
+      │
+      ▼ .95 → .111
+      <span class="node-green">BranchingUPF (.92)</span> ─── ULCL Classifier
+      │ │
+      │ default path │ steered path (after API call)
+      ▼ .111 → .122 ▼ .111 → .132
+      <span class="node-orange">AnchorUPF1 (.93)</span> <span class="node-orange">AnchorUPF2 (.94)</span>
+      │ N6: .123 │ N6: .133
+      ▼ ▼
+      <span class="node-purple">DN Server (.145)</span> <span class="node-purple">DN Server (.145)</span>
+    </div>
+
+    <h3>Reference: Bare-Metal Testbed</h3>
+    <p>The K8s deployment mirrors a working bare-metal testbed on <code>.137</code> (free5gc-core) with I-UPF at
+      <code>.143</code>, PSA-UPF at <code>.148</code>, PSA-UPF2 at <code>.198</code>, gNB at <code>.120</code>, UEs at
+      <code>.121</code>, and DN at <code>.145</code>. The bare-metal Go source tree at <code>~/free5gc/</code> on
+      <code>.137</code> contains all patched NF binaries.
+    </p>
+
+    <!-- ============================================================ -->
+    <h2 id="s1">Phase 1: Kubernetes Cluster Setup</h2>
+
+    <h3 id="s1-kubeadm">kubeadm Installation</h3>
+    <p>A standard 4-node kubeadm cluster (v1.36) on Ubuntu 20.04 VMs. On all 4 nodes:</p>
+    <pre><code><span class="comment"># Disable swap, load modules, set sysctl</span>
+sudo swapoff -a
+sudo sed -i '/swap/d' /etc/fstab
+cat &lt;&lt;EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+sudo modprobe overlay &amp;&amp; sudo modprobe br_netfilter
+cat &lt;&lt;EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+sudo sysctl --system
+
+<span class="comment"># Install containerd + kubeadm/kubelet/kubectl</span>
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl containerd
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml
+<span class="comment"># Set SystemdCgroup = true in config.toml</span>
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+sudo systemctl restart containerd
+
+<span class="comment"># Add K8s repo and install</span>
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+  https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /' | \
+  sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl</code></pre>
+
+    <p>On the control-plane node (<code>.91</code>):</p>
+    <pre><code>sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+mkdir -p $HOME/.kube
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config</code></pre>
+
+    <p>On each worker (<code>.92</code>, <code>.93</code>, <code>.94</code>), join with the token from
+      <code>kubeadm init</code>:
+    </p>
+    <pre><code>sudo kubeadm join 10.160.101.91:6443 --token &lt;token&gt; --discovery-token-ca-cert-hash sha256:&lt;hash&gt;</code></pre>
+
+    <div class="callout callout-warn">
+      <strong>Proxmox serial console trap:</strong> Ubuntu VMs in Proxmox may freeze at boot due to
+      <code>getty@serial0</code>. Fix: <code>sudo systemctl mask serial-getty@ttyS0.service</code> and remove
+      <code>console=ttyS0</code> from GRUB.
+    </div>
+
+    <h3 id="s1-cni">Flannel + Multus CNI</h3>
+    <p>Flannel for pod networking, Multus for macvlan secondary interfaces (required for UPF data-plane):</p>
+    <pre><code><span class="comment"># Flannel</span>
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+
+<span class="comment"># Multus</span>
+kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset.yml</code></pre>
+
+    <p>Network Attachment Definitions (NADs) for macvlan on <code>ens18</code>:</p>
+    <pre><code><span class="comment"># Example NAD for N3 network</span>
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: n3-net
+  namespace: free5gc
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "type": "macvlan",
+      "master": "ens18",
+      "mode": "bridge",
+      "ipam": {
+        "type": "static"
+      }
+    }</code></pre>
+    <p>Similar NADs created for <code>n4-net</code>, <code>n6-net</code>, <code>n9-net</code>.</p>
+
+    <h3 id="s1-registry">Local Container Registry</h3>
+    <p>A local registry on <code>.91</code> (NodePort 32000) for pushing custom images:</p>
+    <pre><code><span class="comment"># Deploy registry as a K8s pod + NodePort service</span>
+kubectl apply -f - &lt;&lt;'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: registry}
+  template:
+    metadata:
+      labels: {app: registry}
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: free5gc-k8s
+      containers:
+      - name: registry
+        image: registry:2
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - {name: data, mountPath: /var/lib/registry}
+      volumes:
+      - name: data
+        hostPath: {path: /opt/registry, type: DirectoryOrCreate}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: default
+spec:
+  type: NodePort
+  selector: {app: registry}
+  ports:
+  - port: 5000
+    targetPort: 5000
+    nodePort: 32000
+EOF
+
+<span class="comment"># Configure containerd on ALL nodes (.91–.94) to trust the insecure registry</span>
+for n in 91 92 93 94; do
+  ssh localadmin@10.160.101.$n "sudo mkdir -p /etc/containerd/certs.d/10.160.101.91:32000 &amp;&amp; \
+    printf 'server = \"http://10.160.101.91:32000\"\n\n[host.\"http://10.160.101.91:32000\"]\n  capabilities = [\"pull\", \"resolve\"]\n  skip_verify = true\n' \
+    | sudo tee /etc/containerd/certs.d/10.160.101.91:32000/hosts.toml &gt;/dev/null &amp;&amp; \
+    sudo sed -i 's#config_path = \"\"#config_path = \"/etc/containerd/certs.d\"#g' /etc/containerd/config.toml &amp;&amp; \
+    sudo systemctl restart containerd"
+done
+
+<span class="comment"># Verify</span>
+curl -s http://10.160.101.91:32000/v2/_catalog</code></pre>
+
+    <h3 id="s1-helm">Helm Chart Deployment</h3>
+    <p>Deploy free5GC using the towards5gs-helm chart with ULCL topology enabled:</p>
+    <pre><code>kubectl create ns free5gc
+cd ~/towards5gs-helm/charts/free5gc
+helm -n free5gc install free5gc-v1 . \
+  --set global.ulcl.enabled=true</code></pre>
+
+    <div class="callout callout-danger">
+      <strong>MongoDB image fix:</strong> The chart's <code>values.yaml</code> had a doubled Docker registry prefix
+      (<code>docker.io/docker.io/bitnami/mongodb</code>). Fix: edit <code>values.yaml</code> to use
+      <code>docker.io/bitnami/mongodb:5.0.18-debian-11-r3</code> (single prefix).
+    </div>
+
+    <p>After deployment, all NF pods run but UE PDU sessions fail with stock v3.3.0 images — this is expected and
+      resolved in Phase 2.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="s2">Phase 2: Custom Patched NF Images</h2>
+
+    <h3 id="s2-why">Why Custom Images Are Required</h3>
+    <p>The stock free5GC v3.3.0 images from the Helm chart have multiple bugs that prevent UE registration and PDU
+      session establishment. The bare-metal testbed runs patched binaries that fix:</p>
+    <ul>
+      <li>AMF: NGAP decode bypass, AUSF <code>_links</code> format fix, NRF discovery query fixes</li>
+      <li>SMF: BPManager <code>FindULCL</code> nil pointer guard, <code>SendPfcpSessionDeletion</code> nil check,
+        charging URR bounds check, custom steering endpoint</li>
+      <li>AUSF/UDM/UDR: API version v2 compatibility (nudr-dr)</li>
+      <li>UPF: gtp5g 0.9.14 compatibility</li>
+    </ul>
+
+    <h3 id="s2-build">Building Images with Buildah</h3>
+    <p>Strategy: copy pre-built patched binaries from bare-metal (<code>.137</code>) and package them in minimal
+      <code>ubuntu:20.04</code> containers using <code>buildah</code> on <code>.91</code>.
+    </p>
+
+    <pre><code><span class="comment"># Install buildah on .91 (Ubuntu 20.04 — needs Kubic repo)</span>
+. /etc/os-release
+echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" \
+  | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+curl -fsSL "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" \
+  | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/libcontainers.gpg
+sudo apt-get update &amp;&amp; sudo apt-get install -y buildah
+
+<span class="comment"># Copy binaries + certs from bare-metal to .91</span>
+<span class="comment"># On bare-metal (.137):</span>
+cd ~/free5gc
+tar czf /tmp/free5gc-patched.tgz bin/amf bin/smf bin/ausf bin/udm bin/udr bin/nssf bin/pcf bin/upf cert/
+scp /tmp/free5gc-patched.tgz localadmin@10.160.101.91:/tmp/
+
+<span class="comment"># On .91:</span>
+mkdir -p ~/imgbuild &amp;&amp; cd ~/imgbuild
+tar xzf /tmp/free5gc-patched.tgz</code></pre>
+
+    <h4>Build pattern for each NF</h4>
+    <pre><code>cd ~/imgbuild
+REG=10.160.101.91:32000
+
+<span class="comment"># Build one NF image (repeat for each)</span>
+nf=smf   <span class="comment"># change to: amf, ausf, udm, udr, nssf, pcf, upf</span>
+c=$(sudo buildah --storage-driver vfs from ubuntu:20.04)
+sudo buildah --storage-driver vfs run $c -- bash -c \
+  "apt-get update &amp;&amp; apt-get install -y libsctp1 iproute2 iptables ca-certificates &amp;&amp; rm -rf /var/lib/apt/lists/*"
+sudo buildah --storage-driver vfs run $c -- mkdir -p /free5gc/bin /free5gc/config /free5gc/cert
+sudo buildah --storage-driver vfs copy $c bin/$nf /free5gc/bin/$nf
+sudo buildah --storage-driver vfs copy $c cert/   /free5gc/cert/
+sudo buildah --storage-driver vfs run  $c -- chmod +x /free5gc/bin/$nf
+sudo buildah --storage-driver vfs config --workingdir /free5gc/bin $c
+sudo buildah --storage-driver vfs commit $c $REG/free5gc-$nf:patched
+sudo buildah --storage-driver vfs push --tls-verify=false $REG/free5gc-$nf:patched
+sudo buildah --storage-driver vfs rm $c</code></pre>
+
+    <div class="callout callout-info">
+      <strong>Note:</strong> The <code>--storage-driver vfs</code> flag is required on Ubuntu 20.04 where the kernel
+      doesn't support rootless overlay. Always run buildah with <code>sudo</code>.
+    </div>
+
+    <h3 id="s2-all-nfs">All 8 NF Images</h3>
+    <p>All 8 NFs were rebuilt as custom images and pushed to the local registry:</p>
+    <table>
+      <tr>
+        <th>Image</th>
+        <th>Source Binary</th>
+        <th>Key Patches</th>
+      </tr>
+      <tr>
+        <td><code>free5gc-amf:patched</code></td>
+        <td>bin/amf</td>
+        <td>NGAP decode, AUSF _links, NRF queries, retransmission timers</td>
+      </tr>
+      <tr>
+        <td><code>free5gc-smf:patched</code></td>
+        <td>bin/smf</td>
+        <td>BPManager nil guard, steering endpoint, default FAR patch</td>
+      </tr>
+      <tr>
+        <td><code>free5gc-ausf:patched</code></td>
+        <td>bin/ausf</td>
+        <td>v2 API compatibility</td>
+      </tr>
+      <tr>
+        <td><code>free5gc-udm:patched</code></td>
+        <td>bin/udm</td>
+        <td>v2 API compatibility</td>
+      </tr>
+      <tr>
+        <td><code>free5gc-udr:patched</code></td>
+        <td>bin/udr</td>
+        <td>v2 API, dbConnectorType:mongodb</td>
+      </tr>
+      <tr>
+        <td><code>free5gc-nssf:patched</code></td>
+        <td>bin/nssf</td>
+        <td>Stock-compatible</td>
+      </tr>
+      <tr>
+        <td><code>free5gc-pcf:patched</code></td>
+        <td>bin/pcf</td>
+        <td>Stock-compatible</td>
+      </tr>
+      <tr>
+        <td><code>free5gc-upf:patched</code></td>
+        <td>bin/upf</td>
+        <td>gtp5g 0.9.14 support, path at /free5gc/upf/upf</td>
+      </tr>
+    </table>
+
+    <p>Point each deployment at the custom images:</p>
+    <pre><code><span class="comment"># Example: update SMF deployment image</span>
+kubectl set image -n free5gc deploy/free5gc-v1-free5gc-smf-smf \
+  smf=10.160.101.91:32000/free5gc-smf:patched
+
+<span class="comment"># Clear stale cached images on the node before restart</span>
+sudo ctr -n k8s.io images rm 10.160.101.91:32000/free5gc-smf:patched 2>/dev/null
+kubectl rollout restart deployment/free5gc-v1-free5gc-smf-smf -n free5gc</code></pre>
+
+    <div class="callout callout-danger">
+      <strong>Critical:</strong> Do NOT run <code>helm upgrade</code> after deploying custom images — it reverts all
+      configmaps and image overrides.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="s3">Phase 3: Control Plane Fixes</h2>
+
+    <h3 id="s3-auth">Authentication Chain</h3>
+    <p>The patched NFs use v2 of the <code>nudr-dr</code> API and a newer MongoDB schema. The auth chain was debugged
+      link-by-link: AMF → AUSF → UDM → UDR → MongoDB.</p>
+
+    <p>Key config additions required for patched NFs:</p>
+
+    <h4>AMF: retransmission timers</h4>
+    <pre><code><span class="comment"># In amfcfg.yaml — required by patched AMF</span>
+t3513:
+  enable: true
+  expireTime: 6s
+  maxRetryTimes: 4
+t3522:
+  enable: true
+  expireTime: 6s
+  maxRetryTimes: 4
+t3550:
+  enable: true
+  expireTime: 6s
+  maxRetryTimes: 4
+t3560:
+  enable: true
+  expireTime: 6s
+  maxRetryTimes: 4
+t3565:
+  enable: true
+  expireTime: 6s
+  maxRetryTimes: 4</code></pre>
+
+    <h4>UDR: connector type</h4>
+    <pre><code><span class="comment"># In udrcfg.yaml — patched UDR requires this</span>
+info:
+  version: 1.1.0
+configuration:
+  dbConnectorType: mongodb</code></pre>
+
+    <h3 id="s3-subscriber">Subscriber Data (Patched Schema)</h3>
+    <p>Patched NFs expect a different MongoDB schema. Subscribers were inserted via <code>mongosh</code> into the
+      MongoDB pod:</p>
+    <pre><code><span class="comment"># Port-forward to MongoDB</span>
+kubectl port-forward -n free5gc svc/mongodb 27017:27017 &amp;
+
+<span class="comment"># Insert subscriber for imsi-208930000000003 across 6 collections</span>
+mongosh mongodb://localhost:27017/free5gc &lt;&lt;'MONGO'
+db.policyData.ues.amData.insertOne({
+  "uesAmPolicyData":{"subscCats":["free5gc"]},
+  "ueId":"imsi-208930000000003"
+});
+
+db.subscriptionData.authenticationData.authenticationSubscription.insertOne({
+  "ueId":"imsi-208930000000003",
+  "authenticationMethod":"5G_AKA",
+  "encPermanentKey":"8baf473f2f8fd09487cccbd7097c6862",
+  "authenticationManagementField":"8000",
+  "encOpcKey":"8e27b6af0e692e750f32667a3b14605d",
+  "sequenceNumber":{"sqn":"000000000000","lastIndexes":{"ausf":0}}
+});
+
+<span class="comment">// ... plus amData, smfSelectionSubscriptionData,</span>
+<span class="comment">// smData, provisionedData entries</span>
+MONGO</code></pre>
+
+    <div class="callout callout-info">
+      <strong>Key difference:</strong> Stock schema uses <code>permanentKey</code>/<code>opcKey</code>; patched schema
+      uses <code>encPermanentKey</code>/<code>encOpcKey</code> and <code>sequenceNumber</code> as an object with
+      <code>sqn</code> + <code>lastIndexes</code>.
+    </div>
+
+    <p>For 8 UEs, the base subscriber (<code>imsi-208930000000003</code>) was cloned to <code>001–008</code>:</p>
+    <pre><code><span class="comment"># Clone subscriber to all 8 IMSIs</span>
+mongosh mongodb://localhost:27017/free5gc &lt;&lt;'MONGO'
+for (let i = 1; i &lt;= 8; i++) {
+  let imsi = "imsi-20893000000000" + i;
+  let src = db.subscriptionData.authenticationData.authenticationSubscription
+    .findOne({"ueId":"imsi-208930000000003"});
+  delete src._id;
+  src.ueId = imsi;
+  db.subscriptionData.authenticationData.authenticationSubscription
+    .replaceOne({"ueId":imsi}, src, {upsert:true});
+  // repeat for each collection...
+}
+MONGO</code></pre>
+
+    <h3 id="s3-ulcl-flag">ULCL Configuration Flag</h3>
+    <p>The <code>ulcl: true</code> flag in <code>smfcfg.yaml</code> is <strong>critical</strong> — without it, the ULCL
+      path builder doesn't engage and the SMF logs "No default data path".</p>
+    <pre><code><span class="comment"># In smfcfg.yaml under userplaneInformation:</span>
+userplaneInformation:
+  <span class="diff-add">ulcl: true</span>
+  upNodes:
+    gNB1:
+      type: AN
+    BranchingUPF:
+      type: UPF
+      nodeID: 10.160.101.112
+      ...</code></pre>
+
+    <div class="callout callout-warn">
+      <strong>This was a recurring issue:</strong> The <code>ulcl: true</code> line was accidentally dropped during
+      configmap edits. Always verify it's present after any config change.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="s4">Phase 4: Data Plane</h2>
+
+    <h3 id="s4-gtp5g">gtp5g Kernel Module Upgrade (0.8.6 → 0.9.14)</h3>
+    <p>The patched UPF binary requires gtp5g 0.9.14 (stock chart installs 0.8.6). Upgrade on all 3 UPF nodes
+      (<code>.92</code>, <code>.93</code>, <code>.94</code>):</p>
+    <pre><code><span class="comment"># Copy gtp5g 0.9.14 source from bare-metal</span>
+<span class="comment"># On bare-metal (.137):</span>
+cd ~/free5gc/gtp5g &amp;&amp; tar czf /tmp/gtp5g.tgz .
+scp /tmp/gtp5g.tgz localadmin@10.160.101.92:/tmp/
+scp /tmp/gtp5g.tgz localadmin@10.160.101.93:/tmp/
+scp /tmp/gtp5g.tgz localadmin@10.160.101.94:/tmp/
+
+<span class="comment"># On each UPF node (.92, .93, .94):</span>
+mkdir -p ~/gtp5g &amp;&amp; cd ~/gtp5g &amp;&amp; tar xzf /tmp/gtp5g.tgz
+
+<span class="comment"># Delete the UPF pod first (so gtp5g can be unloaded)</span>
+<span class="comment"># On .91:</span>
+kubectl delete -n free5gc $(kubectl get pod -n free5gc -o name | grep upf-upfb)
+
+<span class="comment"># On the UPF node:</span>
+sudo rmmod gtp5g 2>/dev/null
+cd ~/gtp5g &amp;&amp; make clean &amp;&amp; make &amp;&amp; sudo make install
+sudo depmod -a &amp;&amp; sudo modprobe gtp5g
+dmesg | tail -3  <span class="comment"># should show gtp5g 0.9.14</span></code></pre>
+
+    <h3 id="s4-uplink">Uplink: UE → DN</h3>
+    <p>After gtp5g upgrade and UPF pod restart, uplink path was verified step by step:</p>
+
+    <h4>Fix 1: AnchorUPF1 N6 egress routing</h4>
+    <p>With multiple macvlan interfaces on the same /24, the default route sent N6 traffic via the wrong interface:</p>
+    <pre><code><span class="comment"># Inside AnchorUPF1 pod:</span>
+ip route replace 10.160.101.145/32 dev n6
+<span class="comment"># This ensures DN-bound traffic exits via n6, not n9</span></code></pre>
+
+    <h4>Fix 2: DN server return route</h4>
+    <p>The DN server (<code>.145</code>) is shared between bare-metal and K8s. Return routes must point at K8s anchors:
+    </p>
+    <pre><code><span class="comment"># On DN server (.145):</span>
+sudo ip route replace 10.61.0.0/16 via 10.160.101.123  <span class="comment"># AnchorUPF1 N6</span>
+sudo ip route replace 10.62.0.0/16 via 10.160.101.133  <span class="comment"># AnchorUPF2 N6</span></code></pre>
+
+    <h4>Fix 3: NAT removal</h4>
+    <p>Bare-metal uses routed return (no MASQUERADE). K8s conntrack was 0, so NAT couldn't un-NAT replies:</p>
+    <pre><code><span class="comment"># Inside each UPF pod:</span>
+iptables -t nat -F  <span class="comment"># flush NAT rules</span></code></pre>
+
+    <h3 id="s4-downlink">Downlink: DN → UE</h3>
+    <p>Several issues blocked downlink GTP-U through the BranchingUPF:</p>
+
+    <h4>Fix 4: BranchingUPF duplicate IP</h4>
+    <p>N9 and N6 both had <code>.113</code> — relocated N6 to <code>.150</code> via deployment annotation patch.</p>
+
+    <h4>Fix 5: BranchingUPF GTP-U binding</h4>
+    <p>Set <code>addr: 0.0.0.0</code> in the gtpu ifList for both N3 and N9 so the UPF listens on all macvlan interfaces
+      for downlink GTP:</p>
+    <pre><code><span class="comment"># In upfcfg.yaml for BranchingUPF:</span>
+gtpu:
+  forwarder: gtp5g
+  ifList:
+    - addr: 0.0.0.0
+      type: N3
+    - addr: 0.0.0.0
+      type: N9</code></pre>
+
+    <h4>Result: bidirectional ping</h4>
+    <pre><code><span class="comment"># On .95:</span>
+ping -I uesimtun0 10.160.101.145 -c 4
+<span class="comment"># 4 packets sent, 4 received, 0% loss</span></code></pre>
+
+    <h3 id="s4-multiue">Multi-UE Setup (8 UEs)</h3>
+    <pre><code><span class="comment"># On .95 — create multi-UE config</span>
+sed "s/imsi-208930000000003/imsi-208930000000001/" \
+  config/free5gc-ue.yaml &gt; config/ue-multi.yaml
+
+<span class="comment"># Launch 8 UEs (keep running in foreground!)</span>
+sudo ./build/nr-ue -c config/ue-multi.yaml -n 8
+
+<span class="comment"># Verify all 8 tunnels</span>
+ip -br addr | grep uesimtun
+<span class="comment"># uesimtun0–7 with 10.61.0.x IPs</span>
+
+<span class="comment"># All 8 ping the DN</span>
+for dev in $(ip -br addr | grep -o 'uesimtun[0-9]*' | sort -u); do
+  ping -I $dev 10.160.101.145 -c 2 -W 2 &amp;
+done
+wait
+<span class="comment"># All 8: 0% packet loss</span></code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="s5">Phase 5: Flow Steering</h2>
+
+    <h3 id="s5-uerouting">UE Routing Configuration</h3>
+    <p>The <code>uerouting.yaml</code> configmap defines the ULCL topology and specificPaths. For the steer to work,
+      AnchorUPF2 must have a pool, and there must be a <code>specificPath</code> with <code>dest</code> matching the
+      traffic destination:</p>
+    <pre><code>info:
+  version: 1.0.7
+  description: Routing information for UE
+
+ueRoutingInfo:
+  UE1:
+    members:
+    - imsi-208930000000001
+    - imsi-208930000000002
+    - imsi-208930000000003
+    - imsi-208930000000004
+    - imsi-208930000000005
+    - imsi-208930000000006
+    - imsi-208930000000007
+    - imsi-208930000000008
+    topology:
+      - A: gNB1
+        B: BranchingUPF
+      - A: BranchingUPF
+        B: AnchorUPF1
+    specificPath:
+      - dest: 10.160.101.145/16
+        path: [BranchingUPF, AnchorUPF2]
+      - dest: 10.160.101.145/16
+        path: [BranchingUPF, AnchorUPF1]
+      - dest: 8.8.8.8/32
+        path: [BranchingUPF]</code></pre>
+
+    <div class="callout callout-success">
+      <strong>Key insight:</strong> AnchorUPF2 must have a pool (<code>10.62.0.0/16</code>) in <code>smfcfg.yaml</code>
+      for the SMF to establish PSA2 sessions with proper PDRs. Without the pool, "No more valid PSA2 path found" appears
+      and AnchorUPF2 gets 0 PDRs.
+    </div>
+
+    <h3 id="s5-smf-patch">SMF Source Code Patch — Default FAR Steering</h3>
+    <p>This is the <strong>critical fix</strong> that makes steering actually redirect traffic. The original
+      <code>HandleSteerTraffic</code> in <code>steering.go</code> only modified SDF-filtered FARs on non-default paths
+      (downlink direction). Uplink traffic (UE → DN) matched the default PDR and always went to AnchorUPF1 regardless of
+      the steer.
+    </p>
+
+    <p><span class="tag tag-patch">Patch</span> Add default-path uplink FAR modification to
+      <code>NFs/smf/internal/sbi/processor/steering.go</code>:
+    </p>
+
+    <pre><code><span class="comment">// ── Insert BEFORE "if len(farList) == 0" ──</span>
+
+<span class="comment">// Also redirect the DEFAULT-path uplink FAR on the I-UPF</span>
+<span class="diff-add">if defaultPath.FirstDPNode != nil &amp;&amp;</span>
+<span class="diff-add">    defaultPath.FirstDPNode.UpLinkTunnel != nil &amp;&amp;</span>
+<span class="diff-add">    defaultPath.FirstDPNode.UpLinkTunnel.PDR != nil {</span>
+<span class="diff-add">    defFAR := defaultPath.FirstDPNode.UpLinkTunnel.PDR.FAR</span>
+<span class="diff-add">    if defFAR != nil &amp;&amp; defFAR.ForwardingParameters != nil {</span>
+<span class="diff-add">        existingTEID := uint32(0)</span>
+<span class="diff-add">        if defFAR.ForwardingParameters.OuterHeaderCreation != nil {</span>
+<span class="diff-add">            existingTEID = defFAR.ForwardingParameters.OuterHeaderCreation.Teid</span>
+<span class="diff-add">        }</span>
+<span class="diff-add">        defFAR.ForwardingParameters.OuterHeaderCreation = &amp;pfcpType.OuterHeaderCreation{</span>
+<span class="diff-add">            OuterHeaderCreationDescription: pfcpType.OuterHeaderCreationGtpUUdpIpv4,</span>
+<span class="diff-add">            Ipv4Address:                    targetIP,</span>
+<span class="diff-add">            Teid:                           existingTEID,</span>
+<span class="diff-add">        }</span>
+<span class="diff-add">        defFAR.State = smf_context.RULE_UPDATE</span>
+<span class="diff-add">        pdrList = append(pdrList, defaultPath.FirstDPNode.UpLinkTunnel.PDR)</span>
+<span class="diff-add">        farList = append(farList, defFAR)</span>
+<span class="diff-add">        debugFARs += fmt.Sprintf("FARID=%d(default),UPF=%s;",</span>
+<span class="diff-add">            defFAR.FARID,</span>
+<span class="diff-add">            defaultPath.FirstDPNode.UPF.NodeID.ResolveNodeIdToIp().String())</span>
+<span class="diff-add">        if iUPFNode == nil {</span>
+<span class="diff-add">            iUPFNode = defaultPath.FirstDPNode</span>
+<span class="diff-add">        }</span>
+<span class="diff-add">    }</span>
+<span class="diff-add">}</span></code></pre>
+
+    <p>Also remove the early return on empty <code>ulcfNodes</code> (since the default-path FAR provides a valid FAR
+      even without SDF nodes).</p>
+
+    <h4>Build and deploy the patched SMF</h4>
+    <pre><code><span class="comment"># Build on .91 (Go 1.25.5 is installed)</span>
+cd ~/free5gc/NFs/smf
+go build -o /tmp/smf-fixed ./cmd/
+ls -la /tmp/smf-fixed  <span class="comment"># 32442720 bytes (larger than original 32438576)</span>
+
+<span class="comment"># Rebuild the SMF image</span>
+cd ~/imgbuild &amp;&amp; cp /tmp/smf-fixed bin/smf
+REG=10.160.101.91:32000
+c=$(sudo buildah --storage-driver vfs from ubuntu:20.04)
+sudo buildah --storage-driver vfs run $c -- bash -c \
+  "apt-get update &amp;&amp; apt-get install -y libsctp1 iproute2 iptables ca-certificates &amp;&amp; rm -rf /var/lib/apt/lists/*"
+sudo buildah --storage-driver vfs run $c -- mkdir -p /free5gc/bin /free5gc/config /free5gc/cert
+sudo buildah --storage-driver vfs copy $c bin/smf /free5gc/bin/smf
+sudo buildah --storage-driver vfs copy $c cert/ /free5gc/cert/
+sudo buildah --storage-driver vfs run $c -- chmod +x /free5gc/bin/smf
+sudo buildah --storage-driver vfs config --workingdir /free5gc/bin $c
+sudo buildah --storage-driver vfs commit $c $REG/free5gc-smf:patched
+sudo buildah --storage-driver vfs push --tls-verify=false $REG/free5gc-smf:patched
+sudo buildah --storage-driver vfs rm $c
+
+<span class="comment"># Deploy</span>
+sudo ctr -n k8s.io images rm $REG/free5gc-smf:patched 2>/dev/null
+kubectl rollout restart deployment/free5gc-v1-free5gc-smf-smf -n free5gc
+kubectl rollout status deployment/free5gc-v1-free5gc-smf-smf -n free5gc</code></pre>
+
+    <h3 id="s5-script">Steering Script</h3>
+    <p>The script on <code>.91</code> port-forwards to the SMF pod and calls the custom REST API for each SUPI:</p>
+    <pre><code><span class="comment"># ~/steering-k8s.sh</span>
+#!/bin/bash
+TARGET=$1
+
+<span class="comment"># Port-forward setup (run once before calling this script)</span>
+<span class="comment"># pkill -f "port-forward.*8000"</span>
+<span class="comment"># smf=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1 | sed 's|pod/||')</span>
+<span class="comment"># kubectl port-forward -n free5gc $smf 8000:80 &gt;/tmp/pf.log 2&gt;&amp;1 &amp;</span>
+
+SUPI_LIST=(
+    "imsi-208930000000001" "imsi-208930000000002" "imsi-208930000000003"
+    "imsi-208930000000004" "imsi-208930000000005" "imsi-208930000000006"
+    "imsi-208930000000007" "imsi-208930000000008"
+)
+
+printf "%-25s | %-15s | %-20s\n" "SUPI" "STATUS" "FARIDs"
+echo "------------------------------------------------------------"
+
+for SUPI in "${SUPI_LIST[@]}"; do
+    RESULT=$(curl -s -v -X POST http://127.0.0.1:8000/nsmf-steering/v1/steer \
+        -H 'Content-Type: application/json' \
+        -d "{\"supi\":\"$SUPI\",\"targetUpf\":\"$TARGET\"}" 2&gt;&amp;1)
+    FARIDS=$(echo "$RESULT" | grep -i "x-debug-far" | grep -oP 'FARID=\K\d+' | paste -sd "," -)
+    if [ -z "$FARIDS" ]; then
+        printf "%-25s | %-15s | %-20s\n" "$SUPI" "FAILED" "N/A"
+    else
+        printf "%-25s | %-15s | %-20s\n" "$SUPI" "SUCCESS" "$FARIDS"
+    fi
+    sleep 0.5
+done</code></pre>
+
+    <h3 id="s5-verify">Verification</h3>
+    <p>The full end-to-end sequence — UEs must be running before steering:</p>
+
+    <pre><code><span class="comment"># 1. Setup port-forward to SMF</span>
+pkill -f "port-forward.*8000"; sleep 1
+smf=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1 | sed 's|pod/||')
+kubectl port-forward -n free5gc $smf 8000:80 &gt;/tmp/pf.log 2&gt;&amp;1 &amp;
+sleep 3
+
+<span class="comment"># 2. Launch 8 UEs on .95 (KEEP RUNNING)</span>
+sudo killall -9 nr-ue 2&gt;/dev/null; sleep 2
+cd ~/ueransim &amp;&amp; sudo ./build/nr-ue -c config/ue-multi.yaml -n 8
+<span class="comment"># Wait for 8x "PDU Session establishment is successful"</span>
+
+<span class="comment"># 3. Start pings from .95 (second terminal)</span>
+for dev in $(ip -br addr | grep -o 'uesimtun[0-9]*' | sort -u); do
+  ping -I $dev 10.160.101.145 &gt;/dev/null 2&gt;&amp;1 &amp;
+done
+
+<span class="comment"># 4. Steer to AnchorUPF2 from .91</span>
+./steering-k8s.sh 10.160.101.131</code></pre>
+
+    <h4>Expected output (with the default-FAR patch)</h4>
+    <pre><code>SUPI                      | STATUS          | FARIDs
+------------------------------------------------------------
+imsi-208930000000001      | SUCCESS         | <span class="string">27,11</span>
+imsi-208930000000002      | SUCCESS         | <span class="string">31,15</span>
+imsi-208930000000003      | SUCCESS         | <span class="string">19,3</span>
+...
+<span class="comment"># Two FARIDs per UE: SDF FAR + default FAR</span></code></pre>
+
+    <h4>X-Debug-FAR verification</h4>
+    <pre><code>curl -s -v -X POST http://127.0.0.1:8000/nsmf-steering/v1/steer \
+  -H 'Content-Type: application/json' \
+  -d '{"supi":"imsi-208930000000003","targetUpf":"10.160.101.131"}' 2&gt;&amp;1 | grep x-debug
+
+<span class="comment"># X-Debug-Far: FARID=19,UPF=10.160.101.112;FARID=3(default),UPF=10.160.101.112;</span>
+<span class="comment">#              ^^^^^^^^ SDF FAR                ^^^^^^^^^^^^^^^ DEFAULT FAR (the fix!)</span></code></pre>
+
+    <h4>tcpdump confirms traffic moved</h4>
+    <pre><code><span class="comment"># On .94 (AnchorUPF2 host) — traffic appears after steering!</span>
+sudo tcpdump -ni ens18 'udp port 2152 and host 10.160.101.132' -nn
+
+<span class="comment"># 10.160.101.111.2152 &gt; 10.160.101.132.2152: UDP, length 100</span>
+<span class="comment"># 10.160.101.111.2152 &gt; 10.160.101.132.2152: UDP, length 100</span>
+<span class="comment"># ^^^^^^^^^^^^^ BranchingUPF         ^^^^^^^^^^^^^ AnchorUPF2 (steered!)</span>
+
+<span class="comment"># Steer back to AnchorUPF1:</span>
+./steering-k8s.sh 10.160.101.144</code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="s6">Phase 6: Autonomous Healing Agent</h2>
+
+    <p>The LSTM-based autonomous healing agent monitors traffic on the BranchingUPF (I-UPF), detects GTP-U flood attacks
+      via an LSTM classifier, and steers malicious UE flows to AnchorUPF2 using the custom SMF steering API. The agent
+      runs on <code>.91</code> and uses the local port-forward to reach the SMF.</p>
+
+    <h3 id="s6-flood">GTP-U Flood Simulator (<code>f_k8s.py</code>)</h3>
+    <p>Sends spoofed GTP-U packets from <code>.95</code> to the BranchingUPF N3 (<code>.111</code>), simulating a flood
+      attack from 2 malicious UEs. The outer source IP must be the gNB IP (<code>.95</code>) so gtp5g accepts the
+      packets.</p>
+
+    <h4>Finding current TEIDs</h4>
+    <p>TEIDs change on every UE relaunch. Always check before running the flood:</p>
+    <pre><code>upfb=$(kubectl get pod -n free5gc -o name | grep upf-upfb | head -1)
+kubectl exec -n free5gc $upfb -c upfb -- sh -c \
+  "LD_LIBRARY_PATH=/usr/lib /tmp/gtp5g-tunnel-bin list pdr upfgtp" 2>/dev/null \
+  | grep -B3 -A3 "10.61.0.7\|10.61.0.8" | grep -E "UE IPv4|In Teid"</code></pre>
+
+    <h4>Key configuration (top of <code>f_k8s.py</code>)</h4>
+    <pre><code>GNB_IP         = "10.160.101.95"         <span class="comment"># K8s gNB (outer src)</span>
+IUPF_N3_IP     = "10.160.101.111"        <span class="comment"># BranchingUPF N3 (outer dst)</span>
+DN_SERVER_IP   = "10.160.101.145"        <span class="comment"># DN server (inner dst)</span>
+
+<span class="comment"># ⚠ UPDATE THESE after every UE relaunch!</span>
+MALICIOUS_UES = [
+    {"ip": "10.61.0.7", "teid": 0x1a},  <span class="comment"># imsi-208930000000007</span>
+    {"ip": "10.61.0.8", "teid": 0x1e},  <span class="comment"># imsi-208930000000008</span>
+]</code></pre>
+
+    <p>Each malicious UE uses its own TEID (the bare-metal version cycled source IPs with a single TEID — incorrect for
+      gtp5g PDR matching).</p>
+
+    <h4>Running the flood</h4>
+    <pre><code><span class="comment"># On .95</span>
+sudo python3 f_k8s.py --pps 5000 --duration 60
+sudo python3 f_k8s.py --pps 10000 --duration 30 --cores 2</code></pre>
+
+    <h3 id="s6-agent">LSTM Healing Agent (<code>agent_kpi_k8s.py</code>)</h3>
+    <p>Adapted from the bare-metal <code>agent_kpi.py</code> for the K8s topology. Key differences:</p>
+    <ul>
+      <li><strong>Steering is local</strong> — calls <code>curl</code> against <code>localhost:8000</code>
+        (port-forward), no SSH to <code>.137</code></li>
+      <li><strong>Auto port-forward recovery</strong> — detects dead port-forwards and restarts them automatically</li>
+      <li><strong>I-UPF monitoring</strong> — SSH to <code>.92</code> host, tcpdump on <code>ens18</code> (macvlan
+        traffic visible on host)</li>
+      <li><strong>Traffic confirmation</strong> — SSH to <code>.94</code>, tcpdump for GTP-U on <code>.132</code></li>
+    </ul>
+
+    <h4>Key configuration (top of <code>agent_kpi_k8s.py</code>)</h4>
+    <pre><code>I_UPF_IP        = "10.160.101.92"         <span class="comment"># BranchingUPF host</span>
+STEER_HOST      = "127.0.0.1"             <span class="comment"># local port-forward</span>
+STEER_PORT      = 8000
+MONITOR_UPF_N4  = "10.160.101.144"        <span class="comment"># AnchorUPF1 N4</span>
+FAILOVER_UPF_N4 = "10.160.101.131"        <span class="comment"># AnchorUPF2 N4</span>
+FAILOVER_HOST   = "10.160.101.94"         <span class="comment"># AnchorUPF2 host</span>
+
+SUPI_NORMAL = [
+    "imsi-208930000000001",
+    "imsi-208930000000002",
+    "imsi-208930000000003",
+    "imsi-208930000000004",
+    "imsi-208930000000005",
+    "imsi-208930000000006",
+]
+
+SUPI_MALICIOUS = [
+    "imsi-208930000000007",  <span class="comment"># attacker UE</span>
+    "imsi-208930000000008",  <span class="comment"># attacker UE</span>
+]</code></pre>
+
+    <h4>Agent loop</h4>
+    <p>The agent polls every ~4 seconds, running two parallel probes:</p>
+    <ol>
+      <li><strong>Ping probe</strong> — SSH to I-UPF host, ping the AnchorUPF1 host to measure RTT and loss</li>
+      <li><strong>Flood probe</strong> — SSH to I-UPF host, tcpdump on <code>ens18</code> for GTP-U packets, extract 11
+        features</li>
+    </ol>
+    <p>Features are scaled and fed to the LSTM classifier (5 classes, <code>CLASS_GTP_FLOOD=4</code>). If GTP_FLOOD is
+      detected for <code>CONFIRM_SECS</code> (4s), the agent steers the malicious UE SUPIs to AnchorUPF2.</p>
+
+    <h4>Prerequisites on <code>.91</code></h4>
+    <pre><code><span class="comment"># Install Python dependencies</span>
+pip3 install torch joblib numpy scikit-learn
+
+<span class="comment"># Copy model assets to ~/agent/model/</span>
+ls ~/agent/model/
+<span class="comment"># lstm_attack_classifier.pth  scaler.pkl  label_encoder.pkl</span>
+
+<span class="comment"># SSH key access (passwordless) from .91 to .92 and .94</span>
+ssh-copy-id localadmin@10.160.101.92
+ssh-copy-id localadmin@10.160.101.94</code></pre>
+
+    <h3 id="s6-rebuild">SMF Rebuild Script (<code>rebuild-smf.sh</code>)</h3>
+    <p>After any SMF source change (e.g., steering patch), this script rebuilds the image and deploys it. Critical
+      because the K8s image cache aggressively holds stale layers — the script uses <code>ctr images rm</code> to force
+      a fresh pull.</p>
+
+    <pre><code>#!/bin/bash
+set -e
+REG=10.160.101.91:32000
+
+echo "=== Copying patched binary ==="
+cd ~/imgbuild
+cp /tmp/smf-fixed bin/smf
+ls -la bin/smf
+
+echo "=== Building image ==="
+c=$(sudo buildah --storage-driver vfs from ubuntu:20.04)
+sudo buildah --storage-driver vfs run $c -- bash -c \
+  "apt-get update &amp;&amp; apt-get install -y libsctp1 iproute2 iptables ca-certificates &amp;&amp; rm -rf /var/lib/apt/lists/*"
+sudo buildah --storage-driver vfs run $c -- mkdir -p /free5gc/bin /free5gc/config /free5gc/cert
+sudo buildah --storage-driver vfs copy $c bin/smf /free5gc/bin/smf
+sudo buildah --storage-driver vfs copy $c cert/ /free5gc/cert/
+sudo buildah --storage-driver vfs run $c -- chmod +x /free5gc/bin/smf
+sudo buildah --storage-driver vfs config --workingdir /free5gc/bin $c
+sudo buildah --storage-driver vfs commit $c $REG/free5gc-smf:patched
+sudo buildah --storage-driver vfs push --tls-verify=false $REG/free5gc-smf:patched
+sudo buildah --storage-driver vfs rm $c
+
+echo "=== Clearing cache + restarting SMF ==="
+sudo ctr -n k8s.io images rm $REG/free5gc-smf:patched 2>/dev/null
+kubectl rollout restart deployment/free5gc-v1-free5gc-smf-smf -n free5gc
+kubectl rollout status deployment/free5gc-v1-free5gc-smf-smf -n free5gc
+
+echo "=== Restarting port-forward ==="
+pkill -f "port-forward.*8000" 2>/dev/null; sleep 1
+smf=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1 | sed 's|pod/||')
+kubectl port-forward -n free5gc $smf 8000:80 >/tmp/pf.log 2>&amp;1 &amp;
+sleep 3
+
+echo "=== Verifying binary ==="
+kubectl exec -n free5gc $smf -c smf -- ls -la /free5gc/bin/smf
+echo "MUST show 32442720 bytes."</code></pre>
+
+    <div class="callout callout-warn">
+      <strong>Image cache trap:</strong> If the same tag (<code>:patched</code>) keeps pulling the old image, use a
+      different tag (e.g., <code>:v2</code>) and <code>kubectl set image</code> to point the deployment at it. This
+      forces K8s to pull a genuinely new image.
+    </div>
+
+    <h3 id="s6-demo">Complete Demo Sequence</h3>
+    <p>The full end-to-end demonstration, in order. Requires 4 terminals.</p>
+
+    <h4><span class="step-num">1</span> Ensure patched SMF is running (.91)</h4>
+    <pre><code><span class="comment"># Verify patched binary (32442720 bytes)</span>
+smf=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1)
+kubectl exec -n free5gc $smf -c smf -- ls -la /free5gc/bin/smf
+
+<span class="comment"># If wrong size, rebuild:</span>
+cd ~/free5gc/NFs/smf &amp;&amp; go build -o /tmp/smf-fixed ./cmd/
+~/rebuild-smf.sh</code></pre>
+
+    <h4><span class="step-num">2</span> Launch 8 UEs (.95 — Terminal 1, keep running)</h4>
+    <pre><code>sudo killall -9 nr-ue 2>/dev/null; sleep 2
+cd ~/ueransim &amp;&amp; sudo ./build/nr-ue -c config/ue-multi.yaml -n 8
+<span class="comment"># Wait for 8x "PDU Session establishment is successful"</span></code></pre>
+
+    <h4><span class="step-num">3</span> Start legitimate pings (.95 — Terminal 2)</h4>
+    <pre><code><span class="comment"># Ping from first 6 UEs (normal traffic)</span>
+for i in $(seq 0 5); do
+  ping -I uesimtun$i 10.160.101.145 >/dev/null 2>&amp;1 &amp;
+done
+echo "6 pings running"</code></pre>
+
+    <h4><span class="step-num">4</span> Update flood TEIDs and start flood (.95 — Terminal 3)</h4>
+    <pre><code><span class="comment"># First get current TEIDs from .91:</span>
+<span class="comment"># upfb=$(kubectl get pod -n free5gc -o name | grep upf-upfb | head -1)</span>
+<span class="comment"># kubectl exec -n free5gc $upfb -c upfb -- sh -c \</span>
+<span class="comment">#   "LD_LIBRARY_PATH=/usr/lib /tmp/gtp5g-tunnel-bin list pdr upfgtp" 2>/dev/null \</span>
+<span class="comment">#   | grep -B3 -A3 "10.61.0.7\|10.61.0.8" | grep -E "UE IPv4|In Teid"</span>
+
+<span class="comment"># Update MALICIOUS_UES in f_k8s.py with new TEIDs, then:</span>
+sudo python3 f_k8s.py --pps 5000 --duration 60</code></pre>
+
+    <h4><span class="step-num">5</span> Run the agent (.91 — Terminal 4)</h4>
+    <pre><code>cd ~/agent
+python3 agent_kpi_k8s.py</code></pre>
+
+    <p>The agent will:</p>
+    <ol>
+      <li>Establish baseline RTT (~0.2ms)</li>
+      <li>Detect GTP_FLOOD when the flood starts (LSTM class=4)</li>
+      <li>Confirm for 4 seconds</li>
+      <li>Steer 2 malicious UEs to AnchorUPF2 (two FARIDs per UE: SDF + default)</li>
+      <li>Log KPI-5, KPI-8, KPI-10 metrics</li>
+      <li>Terminate</li>
+    </ol>
+
+    <h3 id="s6-kpi">KPI Results (Verified on K8s)</h3>
+
+    <table>
+      <tr>
+        <th>KPI</th>
+        <th>Metric</th>
+        <th>K8s Result</th>
+      </tr>
+      <tr>
+        <td>KPI-5</td>
+        <td>LSTM inference time</td>
+        <td><strong>3.59ms avg</strong> (1.35–5.64ms)</td>
+      </tr>
+      <tr>
+        <td>KPI-5</td>
+        <td>Total convergence</td>
+        <td><strong>5.59s</strong> (detection → healing)</td>
+      </tr>
+      <tr>
+        <td>KPI-8</td>
+        <td>PFCP re-anchor time</td>
+        <td><strong>1.05s</strong></td>
+      </tr>
+      <tr>
+        <td>KPI-8</td>
+        <td>Speedup vs manual</td>
+        <td><strong>~32× faster</strong> (vs 6 min baseline)</td>
+      </tr>
+      <tr>
+        <td>KPI-10</td>
+        <td>RTT before flood</td>
+        <td><strong>0.23ms</strong></td>
+      </tr>
+      <tr>
+        <td>KPI-10</td>
+        <td>Packet loss (normal UEs)</td>
+        <td><strong>0%</strong></td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td>Detection method</td>
+        <td>Pure LSTM (class 4 = GTP_FLOOD)</td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td>UEs steered</td>
+        <td>2 malicious → AnchorUPF2, 6 normal → AnchorUPF1</td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td>FARs modified per UE</td>
+        <td>2 (SDF FAR + default FAR)</td>
+      </tr>
+    </table>
+
+    <div class="callout callout-success">
+      <strong>Agent output (verified):</strong> The agent detected GTP_FLOOD at 1239 pps, confirmed at 1316 pps after
+      4s, steered 2/2 malicious UEs with SUCCESS, and terminated after logging all KPI metrics. The custom SMF
+      default-FAR patch ensures both uplink and downlink traffic redirect to AnchorUPF2.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="rootcause">Root-Cause Chain (Summary)</h2>
+    <p>Every issue encountered and its resolution, in the order discovered:</p>
+
+    <table>
+      <tr>
+        <th>#</th>
+        <th>Problem</th>
+        <th>Root Cause</th>
+        <th>Fix</th>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>UE PDU session fails</td>
+        <td>Stock v3.3.0 images have multiple bugs</td>
+        <td>Built 8 custom patched images from bare-metal binaries</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Auth chain fails at UDR</td>
+        <td>Patched NFs use v2 nudr-dr API + newer Mongo schema</td>
+        <td>Re-inserted subscriber data in patched format</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>ARP conflict on .121</td>
+        <td>Old bare-metal VM ghost at .121</td>
+        <td>Relocated upf1 N4 from .121 → .144</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>"No default data path"</td>
+        <td><code>ulcl: true</code> missing from smfcfg</td>
+        <td>Added ulcl flag to configmap</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>UPF version mismatch</td>
+        <td>gtp5g 0.8.6 vs patched UPF needs 0.9.14</td>
+        <td>Upgraded kernel module on all UPF nodes</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>UPF binary not found</td>
+        <td>Path mismatch: /free5gc/upf/upf vs /free5gc/bin/upf</td>
+        <td>Fixed wrapper.sh path in configmap</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>N6 egress wrong interface</td>
+        <td>Multiple /24 macvlan routes = ambiguous default</td>
+        <td><code>ip route replace .145/32 dev n6</code></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>DN can't return packets</td>
+        <td>Shared DN server routes point at bare-metal</td>
+        <td>Replaced with K8s anchor IPs</td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td>BranchingUPF duplicate IP</td>
+        <td>N9 and N6 both .113</td>
+        <td>Relocated N6 to .150</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td>BranchingUPF downlink drop</td>
+        <td>gtpu bound to single interface</td>
+        <td>Set addr: 0.0.0.0 for all-interface listening</td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td>NAT breaks return path</td>
+        <td>Bare-metal uses routed (no NAT), conntrack=0</td>
+        <td>Removed MASQUERADE, added DN return routes</td>
+      </tr>
+      <tr>
+        <td>12</td>
+        <td>Steering doesn't move traffic</td>
+        <td>Only SDF (downlink) FAR modified, not default (uplink)</td>
+        <td><strong>Patched SMF Go source to also modify default-path uplink FAR</strong></td>
+      </tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="ops">Operational Notes</h2>
+    <ul>
+      <li><strong>kubectl only works on .91</strong> (the control-plane node).</li>
+      <li><strong>Port-forward dies on every SMF restart</strong> — always restart it:
+        <code>pkill -f "port-forward.*8000"; smf=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1 | sed 's|pod/||'); kubectl port-forward -n free5gc $smf 8000:80 &gt;/tmp/pf.log 2&gt;&amp;1 &amp;</code>
+      </li>
+      <li><strong>UE sessions exist only while nr-ue runs.</strong> Every SMF restart drops all sessions. Must relaunch
+        UEs on .95 after any SMF change. Steering returns "SMContext not found" without live sessions.</li>
+      <li><strong>Same-tag image updates need cache clearing:</strong>
+        <code>sudo ctr -n k8s.io images rm &lt;img&gt;</code> on the node, then delete the pod.
+      </li>
+      <li><strong>Do NOT run <code>helm upgrade</code></strong> — it reverts all configmaps, image overrides, and
+        deployment annotations.</li>
+      <li><strong>Runtime route fixes are lost on pod restart.</strong> For persistence, add routes to the UPF
+        wrapper.sh configmap (e.g., AnchorUPF1's /32 route via n6, DN return routes).</li>
+      <li><strong>gtp5g-tunnel</strong> (from libgtp5gnl) was built on .93 and copied into UPF pods for PDR/FAR
+        inspection. Not baked into the UPF image — must re-copy after pod restarts.</li>
+      <li><strong>TEIDs change on every UE relaunch.</strong> Always re-check TEIDs before running the flood script. Use
+        the PDR dump command in the <code>f_k8s.py</code> docstring.</li>
+      <li><strong>UE IPs increment</strong> if the SMF pool allocator remembers previous assignments. To reset to
+        <code>10.61.0.1–8</code>, restart the SMF first (clears the pool), then relaunch UEs.
+      </li>
+      <li><strong>Agent requires SSH key access</strong> from .91 to .92 (I-UPF host for tcpdump) and .94 (AnchorUPF2
+        host for traffic confirmation). Set up with <code>ssh-copy-id</code>.</li>
+      <li><strong><code>steering.sh</code> vs <code>steering-k8s.sh</code></strong> — the bare-metal script uses
+        <code>127.0.0.2:8000</code> (SMF runs locally on .137). The K8s script uses <code>127.0.0.1:8000</code>
+        (port-forward on .91). Using the wrong one gives FAILED for all UEs.
+      </li>
+    </ul>
+
+    <!-- ============================================================ -->
+    <h2 id="recovery">Recovery Procedure</h2>
+    <p>After extended operation, overnight restarts, or pod rescheduling, the testbed may need a full recovery. The
+      symptoms and their fixes follow a predictable chain. This section provides both a <strong>quick full-restart
+        recipe</strong> and a <strong>symptom-based troubleshooting guide</strong>.</p>
+
+    <h3>Full Cold-Start Recovery (from scratch)</h3>
+    <p>Run these steps in order on <code>.91</code> unless otherwise noted. This handles every known failure mode.</p>
+
+    <h4><span class="step-num">1</span> Reload gtp5g on all UPF nodes (.92, .93, .94)</h4>
+    <p>After extended operation, the gtp5g kernel module can accumulate stale state (upfgtp RX=0, TX errors &gt; 0).
+      Reload it on each UPF node:</p>
+    <pre><code><span class="comment"># Delete UPF pods first (gtp5g can't unload while in use)</span>
+kubectl delete -n free5gc $(kubectl get pod -n free5gc -o name | grep upf-upfb)
+kubectl delete -n free5gc $(kubectl get pod -n free5gc -o name | grep upf-upf1)
+kubectl delete -n free5gc $(kubectl get pod -n free5gc -o name | grep upf-upf2)
+
+<span class="comment"># Reload gtp5g on each node</span>
+for node in 92 93 94; do
+  ssh localadmin@10.160.101.$node "sudo rmmod gtp5g; sudo modprobe gtp5g"
+  echo "gtp5g reloaded on .$node"
+done
+
+<span class="comment"># Wait for K8s to recreate the UPF pods</span>
+kubectl get pod -n free5gc -w | grep upf
+<span class="comment"># Wait until all 3 show Running 1/1</span></code></pre>
+
+    <h4><span class="step-num">2</span> Restart SMF (re-establish PFCP associations)</h4>
+    <p>After UPF pod recreation, the SMF holds stale PFCP sessions. Restart it to re-associate with all 3 UPFs:</p>
+    <pre><code>kubectl rollout restart deployment/free5gc-v1-free5gc-smf-smf -n free5gc
+kubectl rollout status deployment/free5gc-v1-free5gc-smf-smf -n free5gc
+
+<span class="comment"># Verify 3 PFCP associations (.112, .144, .131)</span>
+smf=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1)
+kubectl logs -n free5gc $smf -c smf | grep -i "association setup accepted"</code></pre>
+
+    <h4><span class="step-num">3</span> Verify patched SMF binary</h4>
+    <pre><code>smf=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1)
+kubectl exec -n free5gc $smf -c smf -- ls -la /free5gc/bin/smf
+<span class="comment"># MUST show 32442720 bytes</span>
+<span class="comment"># If 32438576 → run ~/rebuild-smf.sh and repeat step 2</span></code></pre>
+
+    <h4><span class="step-num">4</span> Reapply runtime data-plane fixes</h4>
+    <p>These are lost on every pod restart:</p>
+    <pre><code><span class="comment"># AnchorUPF1 — N6 route to DN + flush stale NAT</span>
+upf1=$(kubectl get pod -n free5gc -o name | grep upf-upf1 | head -1)
+kubectl exec -n free5gc $upf1 -c upf1 -- ip route replace 10.160.101.145/32 dev n6
+kubectl exec -n free5gc $upf1 -c upf1 -- iptables -t nat -F
+
+<span class="comment"># AnchorUPF2 — N6 route to DN + flush stale NAT</span>
+upf2=$(kubectl get pod -n free5gc -o name | grep upf-upf2 | head -1)
+kubectl exec -n free5gc $upf2 -c upf2 -- ip route replace 10.160.101.145/32 dev n6
+kubectl exec -n free5gc $upf2 -c upf2 -- iptables -t nat -F
+
+<span class="comment"># DN server return routes (check if already present)</span>
+ssh localadmin@10.160.101.145 "sudo ip route replace 10.61.0.0/16 via 10.160.101.123; \
+  sudo ip route replace 10.62.0.0/16 via 10.160.101.133; \
+  ip route | grep '10.6'"</code></pre>
+
+    <h4><span class="step-num">5</span> Restart port-forward to SMF</h4>
+    <pre><code>pkill -f "port-forward.*8000" 2>/dev/null; sleep 1
+smf=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1 | sed 's|pod/||')
+kubectl port-forward -n free5gc $smf 8000:80 >/tmp/pf.log 2>&amp;1 &amp;
+sleep 3
+
+<span class="comment"># Verify</span>
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/
+<span class="comment"># Should return 404 (SMF reachable)</span></code></pre>
+
+    <h4><span class="step-num">6</span> Restart gNB + UEs on .95</h4>
+    <pre><code><span class="comment"># On .95</span>
+sudo killall -9 nr-gnb nr-ue 2>/dev/null; sleep 2
+cd ~/ueransim
+./build/nr-gnb -c config/free5gc-gnb.yaml &amp;
+sleep 3
+<span class="comment"># Confirm: "NG Setup procedure is successful"</span>
+sudo ./build/nr-ue -c config/ue-multi.yaml -n 8
+<span class="comment"># Wait for 8x "PDU Session establishment is successful"</span></code></pre>
+
+    <h4><span class="step-num">7</span> Verify ping + steering</h4>
+    <pre><code><span class="comment"># On .95</span>
+ping -I uesimtun0 10.160.101.145 -c 4
+<span class="comment"># Should show 0% loss</span>
+
+<span class="comment"># On .91</span>
+./steering-k8s.sh 10.160.101.131
+<span class="comment"># Should show 8x SUCCESS with two FARIDs each</span></code></pre>
+
+    <h3>Symptom-Based Troubleshooting</h3>
+
+    <table>
+      <tr>
+        <th>Symptom</th>
+        <th>Cause</th>
+        <th>Fix</th>
+      </tr>
+      <tr>
+        <td><code>NG Setup: unknown-PLMN-or-SNPN</code></td>
+        <td>AMF has stale SCTP state after overnight</td>
+        <td><code>kubectl rollout restart deploy/free5gc-v1-free5gc-amf-amf -n free5gc</code>, then restart gNB</td>
+      </tr>
+      <tr>
+        <td><code>PDU Session Reject [NETWORK_FAILURE]</code></td>
+        <td>SMF lost PFCP associations (UPF pods restarted)</td>
+        <td>Restart SMF (<strong>Step 2</strong>), then relaunch UEs</td>
+      </tr>
+      <tr>
+        <td>Ping 100% loss, GTP-U on .92 shows 0 packets</td>
+        <td>gtp5g module corrupt (upfgtp RX=0, TX errors&gt;0)</td>
+        <td>Delete UPF pod → <code>rmmod gtp5g; modprobe gtp5g</code> on host → restart SMF → relaunch UEs
+          (<strong>Steps 1–6</strong>)</td>
+      </tr>
+      <tr>
+        <td>Ping 100% loss, GTP-U reaches BranchingUPF but not AnchorUPF1</td>
+        <td>N6 route lost on AnchorUPF1 pod</td>
+        <td><code>kubectl exec upf1 -- ip route replace 10.160.101.145/32 dev n6</code> (<strong>Step 4</strong>)</td>
+      </tr>
+      <tr>
+        <td>Ping 100% loss, GTP-U reaches AnchorUPF but DN doesn't reply</td>
+        <td>DN server return routes missing</td>
+        <td><code>ssh .145 "sudo ip route replace 10.61.0.0/16 via 10.160.101.123"</code> (<strong>Step 4</strong>)</td>
+      </tr>
+      <tr>
+        <td>Steering returns all FAILED, port-forward returns <code>000</code></td>
+        <td>Port-forward died (SMF restarted)</td>
+        <td>Restart port-forward (<strong>Step 5</strong>)</td>
+      </tr>
+      <tr>
+        <td>Steering returns all FAILED, port-forward returns <code>404</code></td>
+        <td>"SMContext not found" — UE sessions not active</td>
+        <td>Relaunch UEs on .95 (<strong>Step 6</strong>)</td>
+      </tr>
+      <tr>
+        <td>Steering returns SUCCESS with <strong>one</strong> FARID per UE</td>
+        <td>Old SMF binary without default-FAR patch</td>
+        <td>Run <code>~/rebuild-smf.sh</code>, repeat Steps 2–6</td>
+      </tr>
+      <tr>
+        <td>UE IPs don't start at 10.61.0.1</td>
+        <td>SMF pool allocator remembers old assignments</td>
+        <td>Restart SMF (<strong>Step 2</strong>) before relaunching UEs — resets pool</td>
+      </tr>
+      <tr>
+        <td>Steering SUCCESS + two FARIDs, but no traffic on AnchorUPF2 capture</td>
+        <td>AnchorUPF2 has 0 PDRs (pool missing in smfcfg)</td>
+        <td>Ensure <code>10.62.0.0/16</code> pool in smfcfg under AnchorUPF2, restart SMF + UEs</td>
+      </tr>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>Rule of thumb:</strong> When in doubt, run the full 7-step recovery. It takes ~3 minutes and resolves
+      every known failure mode. The most common issue after overnight is the AMF SCTP state (symptom:
+      <code>unknown-PLMN</code>) — a simple AMF restart + gNB restart fixes it without touching anything else.
+    </div>
+
+    <div class="callout callout-success" style="margin-top: 40px;">
+      <strong>End state:</strong> 8 patched NFs on K8s, 8 UEs with bidirectional connectivity (0% loss), flow steering
+      between AnchorUPF1 (.144) and AnchorUPF2 (.131) verified via tcpdump, and autonomous LSTM-based healing agent
+      detecting GTP floods and steering malicious flows in ~1s — all on Kubernetes.
+    </div>
+
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('pre').forEach(function (pre) {
+        var btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.textContent = 'Copy';
+        btn.addEventListener('click', function () {
+          var code = pre.querySelector('code');
+          var text = (code || pre).textContent;
+          navigator.clipboard.writeText(text).then(function () {
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(function () {
+              btn.textContent = 'Copy';
+              btn.classList.remove('copied');
+            }, 2000);
+          }).catch(function () {
+            // Fallback for older browsers
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(function () {
+              btn.textContent = 'Copy';
+              btn.classList.remove('copied');
+            }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+</body>
+
+</html>
