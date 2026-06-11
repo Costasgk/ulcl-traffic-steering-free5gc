@@ -5,32 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>free5GC ULCL on Kubernetes — Complete Implementation Guide</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Sans+3:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 
   :root {
-    --ink: #1a1a1a;
-    --ink2: #333;
-    --paper: #faf9f6;
-    --paper2: #f3f1ec;
-    --rule: #d6d2ca;
-    --rule-light: #e8e5de;
-    --accent: #326891;
-    --accent-light: #eef3f8;
-    --red: #a0333a;
-    --red-light: #faf0f0;
-    --green: #2e6e4e;
-    --green-light: #eef6f1;
-    --gold: #8b6914;
-    --gold-light: #faf5e8;
-    --muted: #666;
-    --muted2: #999;
-    --code-bg: #2a2520;
-    --code-fg: #e0dcd6;
-    --code-border: #3d3830;
-    --sidebar-w: 240px;
-    --serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
-    --sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    --ink: #0e0e0e;
+    --ink2: #2e2b27;
+    --paper: #f5f2ed;
+    --paper2: #ede9e1;
+    --rule: #d4cfc6;
+    --rule-light: #e8e4dc;
+    --accent: #c84b2f;
+    --accent-pale: #f5e8e4;
+    --blue: #1a4a7a;
+    --blue-pale: #e4ecf5;
+    --green: #2d6b4a;
+    --green-pale: #e3f0ea;
+    --gold: #9a6c1a;
+    --gold-pale: #f5eedc;
+    --muted: #6b6560;
+    --muted2: #9a9590;
+    --code-bg: #1a1814;
+    --code-fg: #e8e4dc;
+    --sidebar-w: 280px;
+    --serif: 'Playfair Display', serif;
+    --sans: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -50,28 +49,61 @@
     position: fixed; top: 0; left: 0;
     width: var(--sidebar-w); height: 100vh;
     overflow-y: auto;
-    background: var(--paper);
-    border-right: 1px solid var(--rule);
-    padding: 32px 20px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 32px 28px;
     z-index: 100;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  nav.sidebar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
   }
   nav.sidebar h2 {
-    font-family: var(--serif);
-    font-size: 13px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 2px;
-    margin-bottom: 20px; font-weight: 400;
+    font-family: "Playfair Display", serif;
+    font-size: 18px; color: #f0ece4;
+    line-height: 1.25; margin-bottom: 12px; font-weight: 600;
   }
-  nav.sidebar a {
-    display: block; color: var(--muted); text-decoration: none;
-    font-size: 12.5px; padding: 4px 0; transition: color 0.15s;
+  nav.sidebar h2 span {
+    font-size: 34px; 
+    margin-top: 0px;
+    color: #4e7fe9;
   }
-  nav.sidebar a:hover, nav.sidebar a.active { color: var(--ink); }
-  nav.sidebar .sub { padding-left: 14px; font-size: 11.5px; color: var(--muted2); }
+  nav.sidebar a,
+  nav.sidebar span {
+    display: flex; align-items: baseline; gap: 10px;
+    color: #8a8480; text-decoration: none;
+    font-size: 12.5px; padding: 7px 0; transition: color 0.15s;
+    border-left: 2px solid transparent; line-height: 1.45;
+  }
+  nav.sidebar a.top-level,
+  nav.sidebar span.top-level {
+    font-family: "DM Mono", monospace;
+    color: #5a5650; font-weight: 600;
+    font-size: 10px; letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  nav.sidebar span.top-level {
+    cursor: default;
+  }
+  nav.sidebar span.top-level:hover {
+    color: #5a5650 !important;
+  }
+  nav.sidebar a.top-level:hover {
+    color: #5a5650;
+  }
+  nav.sidebar a:hover { color: #f0ece4; }
+  nav.sidebar span.top-level:hover { color: #f0ece4; }
+  nav.sidebar a.active { color: #f0ece4; border-left-color: var(--accent); padding-left: 6px; }
+  nav.sidebar .sub { padding-left: 14px; font-size: 11.5px; color: #8a8480; }
 
   main {
-    margin-left: var(--sidebar-w);
-    max-width: 780px;
-    padding: 60px 48px 120px;
+    margin-left: calc(var(--sidebar-w) + 40px);
+    max-width: 1100px;
+    padding: 44px 72px 64px;
     width: 100%;
   }
 
@@ -229,42 +261,42 @@
 <body>
 
 <nav class="sidebar">
-  <h2 style="font-size: 24px; margin-top: 0px;">K8s ULCL Guide</h2>
+  <h2 style="font-size: 30px; margin-top: 0px;"><span >Kubernetes</span>ULCL Guide</h2>
   <a href="#overview">Overview</a>
   <a href="#topology">Topology &amp; IPs</a>
-  <a href="#s1" style="margin-top:12px; color:var(--ink); font-weight:600;">Phase 1: Cluster</a>
+  <span class="top-level" style="margin-top:12px;">Phase 1: Cluster</span>
   <a href="#s1-kubeadm" class="sub">kubeadm Setup</a>
   <a href="#s1-cni" class="sub">Flannel + Multus</a>
   <a href="#s1-registry" class="sub">Local Registry</a>
   <a href="#s1-helm" class="sub">Helm Deployment</a>
-  <a href="#s2" style="margin-top:12px; color:var(--ink); font-weight:600;">Phase 2: Custom Images</a>
+  <span class="top-level" style="margin-top:12px;">Phase 2: Custom Images</span>
   <a href="#s2-why" class="sub">Why Patch</a>
   <a href="#s2-build" class="sub">Building Images</a>
   <a href="#s2-all-nfs" class="sub">All 8 NFs</a>
-  <a href="#s3" style="margin-top:12px; color:var(--ink); font-weight:600;">Phase 3: Control Plane</a>
+  <span class="top-level" style="margin-top:12px;">Phase 3: Control Plane</span>
   <a href="#s3-auth" class="sub">Auth Chain</a>
   <a href="#s3-subscriber" class="sub">Subscriber Data</a>
   <a href="#s3-ulcl-flag" class="sub">ULCL Flag</a>
-  <a href="#s4" style="margin-top:12px; color:var(--ink); font-weight:600;">Phase 4: Data Plane</a>
+  <span class="top-level" style="margin-top:12px;">Phase 4: Data Plane</span>
   <a href="#s4-gtp5g" class="sub">gtp5g 0.9.14</a>
   <a href="#s4-uplink" class="sub">Uplink Path</a>
   <a href="#s4-downlink" class="sub">Downlink Path</a>
   <a href="#s4-multiue" class="sub">8 UEs</a>
-  <a href="#s5" style="margin-top:12px; color:var(--ink); font-weight:600;">Phase 5: Steering</a>
+  <span class="top-level" style="margin-top:12px;">Phase 5: Steering</span>
   <a href="#s5-uerouting" class="sub">UE Routing</a>
   <a href="#s5-smf-patch" class="sub">SMF Source Patch</a>
   <a href="#s5-script" class="sub">Steering Script</a>
   <a href="#s5-verify" class="sub">Verification</a>
-  <a href="#s6" style="margin-top:12px; color:var(--ink); font-weight:600;">Phase 6: Agent</a>
+  <span class="top-level" style="margin-top:12px;">Phase 6: Agent</span>
   <a href="#s6-flood" class="sub">Flood Simulator</a>
   <a href="#s6-agent" class="sub">LSTM Agent</a>
   <a href="#s6-rebuild" class="sub">Rebuild Script</a>
   <a href="#s6-demo" class="sub">Full Demo</a>
   <a href="#s6-kpi" class="sub">KPI Results</a>
-  <a href="#rootcause" style="margin-top:12px; color:var(--ink); font-weight:600;">Root-Cause Chain</a>
+  <span class="top-level" style="margin-top:12px;">Root-Cause Chain</span>
   <a href="#ops" style="margin-top:8px;">Operational Notes</a>
   <a href="#recovery">Recovery Procedure</a>
-  <a href="index.html" style="margin-top:12px; color:var(--accent); font-weight:600; letter-spacing: 2px;">←
+  <a href="index.html" class="top-level" style="margin-top:12px; letter-spacing: 2px; color:#c84b2f; font-size: 12.5px; text-transform: none;">←
       Bare-Metal ULCL Guide</a>
 </nav>
 
@@ -274,7 +306,6 @@
 <h1>free5GC ULCL on <span>Kubernetes</span></h1>
 <p class="subtitle">
   Complete implementation guide: from bare-metal kubeadm cluster to verified ULCL traffic steering between PSA-UPFs with 8 UEs.<br>
-  MARE Project · SNS JU Grant 101191436 · NCSR Demokritos · June 2026
 </p>
 
 <!-- ============================================================ -->
