@@ -1,4 +1,4 @@
-# free5gc-ulcl-traffic-steering
+# Free5GC Setup & ULCL Traffic Steering
 
 A compact repository for free5GC ULCL (Uplink Classifier) traffic steering implementation guidance across Kubernetes and bare-metal environments.
 
