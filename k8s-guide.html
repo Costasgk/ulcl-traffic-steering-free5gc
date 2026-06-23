@@ -650,7 +650,8 @@
     <p>The K8s deployment mirrors a working bare-metal testbed on <code>.137</code> (free5gc-core) with I-UPF at
       <code>.143</code>, PSA-UPF at <code>.148</code>, PSA-UPF2 at <code>.198</code>, gNB at <code>.120</code>, UEs at
       <code>.121</code>, and DN at <code>.145</code>. The bare-metal Go source tree at <code>~/free5gc/</code> on
-      <code>.137</code> contains all patched NF binaries.</p>
+      <code>.137</code> contains all patched NF binaries.
+    </p>
 
     <!-- ============================================================ -->
     <h2 id="s1">Phase 1: Kubernetes Cluster Setup</h2>
@@ -698,7 +699,8 @@ sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config</code></pre>
 
     <p>On each worker (<code>.92</code>, <code>.93</code>, <code>.94</code>), join with the token from
-      <code>kubeadm init</code>:</p>
+      <code>kubeadm init</code>:
+    </p>
     <pre><code>sudo kubeadm join 10.160.101.91:6443 --token &lt;token&gt; --discovery-token-ca-cert-hash sha256:&lt;hash&gt;</code></pre>
 
     <div class="callout callout-warn">
@@ -823,7 +825,8 @@ helm -n free5gc install free5gc-v1 . \
 
     <h3 id="s2-build">Building Images with Buildah</h3>
     <p>Strategy: copy pre-built patched binaries from bare-metal (<code>.137</code>) and package them in minimal
-      <code>ubuntu:20.04</code> containers using <code>buildah</code> on <code>.91</code>.</p>
+      <code>ubuntu:20.04</code> containers using <code>buildah</code> on <code>.91</code>.
+    </p>
 
     <pre><code><span class="comment"># Install buildah on .91 (Ubuntu 20.04 — needs Kubic repo)</span>
 . /etc/os-release
@@ -1327,10 +1330,12 @@ ueRoutingInfo:
     <p>This is the <strong>critical fix</strong> that makes steering actually redirect traffic. The original
       <code>HandleSteerTraffic</code> in <code>steering.go</code> only modified SDF-filtered FARs on non-default paths
       (downlink direction). Uplink traffic (UE → DN) matched the default PDR and always went to AnchorUPF1 regardless of
-      the steer.</p>
+      the steer.
+    </p>
 
     <p><span class="tag tag-patch">Patch</span> Add default-path uplink FAR modification to
-      <code>NFs/smf/internal/sbi/processor/steering.go</code>:</p>
+      <code>NFs/smf/internal/sbi/processor/steering.go</code>:
+    </p>
 
     <pre><code><span class="comment">// ── Insert BEFORE "if len(farList) == 0" ──</span>
 
@@ -1818,7 +1823,8 @@ python3 agent_kpi_k8s.py</code></pre>
       <li><strong>UE sessions exist only while nr-ue runs.</strong> Every SMF restart drops all sessions. Must relaunch
         UEs on .95 after any SMF change. Steering returns "SMContext not found" without live sessions.</li>
       <li><strong>Same-tag image updates need cache clearing:</strong>
-        <code>sudo ctr -n k8s.io images rm &lt;img&gt;</code> on the node, then delete the pod.</li>
+        <code>sudo ctr -n k8s.io images rm &lt;img&gt;</code> on the node, then delete the pod.
+      </li>
       <li><strong>Do NOT run <code>helm upgrade</code></strong> — it reverts all configmaps, image overrides, and
         deployment annotations.</li>
       <li><strong>Runtime route fixes are lost on pod restart.</strong> For persistence, add routes to the UPF
@@ -1828,12 +1834,14 @@ python3 agent_kpi_k8s.py</code></pre>
       <li><strong>TEIDs change on every UE relaunch.</strong> Always re-check TEIDs before running the flood script. Use
         the PDR dump command in the <code>f_k8s.py</code> docstring.</li>
       <li><strong>UE IPs increment</strong> if the SMF pool allocator remembers previous assignments. To reset to
-        <code>10.61.0.1–8</code>, restart the SMF first (clears the pool), then relaunch UEs.</li>
+        <code>10.61.0.1–8</code>, restart the SMF first (clears the pool), then relaunch UEs.
+      </li>
       <li><strong>Agent requires SSH key access</strong> from .91 to .92 (I-UPF host for tcpdump) and .94 (AnchorUPF2
         host for traffic confirmation). Set up with <code>ssh-copy-id</code>.</li>
       <li><strong><code>steering.sh</code> vs <code>steering-k8s.sh</code></strong> — the bare-metal script uses
         <code>127.0.0.2:8000</code> (SMF runs locally on .137). The K8s script uses <code>127.0.0.1:8000</code>
-        (port-forward on .91). Using the wrong one gives FAILED for all UEs.</li>
+        (port-forward on .91). Using the wrong one gives FAILED for all UEs.
+      </li>
     </ul>
 
     <!-- ============================================================ -->
@@ -1918,269 +1926,229 @@ python3 agent_kpi_k8s.py</code></pre>
       them if your subscribers use different credentials.
     </p>
     <pre><code>#!/usr/bin/env bash
+#!/bin/bash
+# cold-start.sh — Full K8s ULCL testbed recovery
+# Run on .91 (as localadmin, NOT sudo — sudo loses kubeconfig).
+# Usage: ./cold-start.sh
 #
-# cold-start.sh — bring up the free5GC v1.1.7 ULCL K8s testbed after a reboot.
-#
-# RUN AS localadmin (NOT sudo) — sudo loses your kubeconfig and every
-# kubectl call falls back to localhost:8080 and fails.
-#
-#   ./cold-start.sh
-#
-# Fixes baked in (the four things that broke on 2026-06-15):
-#   1. policy smData doc: smPolicySnssaiData is TOP-LEVEL (no smPolicyData wrapper).
-#      The wrapper made the UDR 404 on every PDU establishment.
-#   2. port-forward uses 8000:80 (SMF SBI listens on 80 in-cluster) and a
-#      writable log path under $HOME (not a root-owned /tmp file).
-#   3. UPF NAT step flushes AND re-adds MASQUERADE (it used to flush only).
-#   4. gtp5g: verifies the loaded module is 0.9.x on each UPF node; warns if not.
-#
-set -uo pipefail
+# Auth format note: authenticationSubscription MUST use the patched-UDM format —
+# encPermanentKey/encOpcKey (strings) and sequenceNumber as an OBJECT
+# {sqn, lastIndexes:{ausf:0}}. The old permanentKey/opc objects with a flat-string
+# sequenceNumber make the UDM throw "cannot unmarshal string into ...sequenceNumber"
+# → AUSF 500 → AMF CONGESTION → all UEs rejected. Step 2 below uses the correct
+# format and step 2 verifies it.
+set +e
 
-# ----- config -------------------------------------------------------------
-NS=free5gc
-PLMN=20893
-IMSIS=(imsi-208930000000001 imsi-208930000000002 imsi-208930000000003 imsi-208930000000004 \
-       imsi-208930000000005 imsi-208930000000006 imsi-208930000000007 imsi-208930000000008)
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+step() { echo -e "\n${GREEN}=== $1 ===${NC}"; }
+warn() { echo -e "${YELLOW}⚠ $1${NC}"; }
 
-# Auth credentials — *** VERIFY THESE MATCH YOUR ORIGINAL SCRIPT ***
-# (free5gc default test values shown; replace if yours differ)
-K=&quot;8baf473f2f8fd09487cccbd7097c6862&quot;
-OPC=&quot;8e27b6af0e692e750f32667a3b14605d&quot;
-SQN=&quot;000000000100&quot;
-AMF_FIELD=&quot;8000&quot;
+REG=10.160.101.91:32000
 
-SST=1
-SD=&quot;010203&quot;
-SNSSAI_KEY=&quot;01010203&quot;        # webconsole/UDR mongo map-key convention
-DNN=internet
-UE_CIDR=&quot;10.61.0.0/16&quot;
+# ─────────────────────────────────────────────
+step "1/11 — Fix MongoDB liveness probe (mongo→mongosh)"
+kubectl patch statefulset mongodb -n free5gc --type='json' -p='[
+  {"op":"replace","path":"/spec/template/spec/containers/0/livenessProbe/exec/command","value":["mongosh","--quiet","--disableImplicitSessions","--eval","db.adminCommand(\"ping\")"]},
+  {"op":"replace","path":"/spec/template/spec/containers/0/readinessProbe/exec/command","value":["bash","-ec","mongosh --quiet --disableImplicitSessions --eval \"db.hello().isWritablePrimary || db.hello().secondary\" | grep -q true"]}
+]' 2>/dev/null && echo "MongoDB probes patched (mongo→mongosh)" || echo "Probes already patched or patch failed"
 
-SMF_BIN_SIZE=32442720
-PF_LOG=&quot;$HOME/pf.log&quot;        # writable; NOT /tmp (root-owned leftovers break it)
-DN_HOST=10.160.101.145
-DN_USER=localadmin
-
-# UPF N4 node IDs for PFCP-association check
-declare -A UPF_N4=( [AnchorUPF1]=10.160.101.144 [AnchorUPF2]=10.160.101.131 [BranchingUPF]=10.160.101.112 )
-
-GREEN=$&#x27;\e[32m&#x27;; RED=$&#x27;\e[31m&#x27;; YEL=$&#x27;\e[33m&#x27;; NC=$&#x27;\e[0m&#x27;
-ok(){   echo &quot;${GREEN}OK${NC}  $*&quot;; }
-warn(){ echo &quot;${YEL}!!${NC}  $*&quot;; }
-err(){  echo &quot;${RED}XX${NC}  $*&quot;; }
-
-pod(){ kubectl get pods -n &quot;$NS&quot; -o name 2&gt;/dev/null | grep -m1 &quot;$1&quot; | cut -d/ -f2; }
-
-# ----- 0/9 sanity: kubectl works (i.e. not run under sudo) ----------------
-echo &quot;=== 0/9 — Preflight (kubectl reachable, not sudo) ===&quot;
-if ! kubectl get ns &quot;$NS&quot; &gt;/dev/null 2&gt;&amp;1; then
-  err &quot;kubectl can&#x27;t reach the cluster. Are you running this with sudo? Run it as localadmin (no sudo).&quot;
-  exit 1
-fi
-# clear root-owned leftovers from any past sudo run
-rm -f /tmp/mongo_probe_status /tmp/pf.log /tmp/mongodb_fixed.json 2&gt;/dev/null || true
-ok &quot;kubectl reachable&quot;
-
-# ----- 1/9 MongoDB liveness probe (mongo -&gt; mongosh) ----------------------
-echo &quot;=== 1/9 — Fix MongoDB liveness/readiness probe (mongo -&gt; mongosh) ===&quot;
-# The stock probe execs &#x27;mongo&#x27; which doesn&#x27;t exist (replaced by mongosh).
-# Patch the statefulset probes if they still reference the old binary.
-if kubectl get statefulset -n &quot;$NS&quot; mongodb &gt;/dev/null 2&gt;&amp;1; then
-  if kubectl get statefulset -n &quot;$NS&quot; mongodb -o yaml | grep -q &#x27;&quot;mongo&quot;&#x27;; then
-    kubectl get statefulset -n &quot;$NS&quot; mongodb -o json \
-      | sed &#x27;s/&quot;mongo&quot;/&quot;mongosh&quot;/g&#x27; \
-      | kubectl apply -f - &gt;/dev/null 2&gt;&amp;1 &amp;&amp; ok &quot;probe patched (mongo-&gt;mongosh)&quot; \
-      || warn &quot;probe patch apply failed (continuing)&quot;
-  else
-    ok &quot;probe already using mongosh&quot;
+echo "Waiting for MongoDB..."
+for i in $(seq 1 60); do
+  READY=$(kubectl get pod -n free5gc mongodb-0 -o jsonpath='{.status.containerStatuses[0].ready}' 2>/dev/null)
+  if [ "$READY" = "true" ]; then
+    echo "MongoDB is ready"
+    break
   fi
-fi
-
-echo &quot;    Waiting for MongoDB to actually serve queries...&quot;
-MONGO=$(pod mongodb)
-MONGO_OK=0
-for i in $(seq 1 30); do
-  if [ -n &quot;$MONGO&quot; ] &amp;&amp; kubectl exec -n &quot;$NS&quot; &quot;$MONGO&quot; -- mongosh --quiet --eval &#x27;db.runCommand({ping:1}).ok&#x27; 2&gt;/dev/null | grep -q 1; then
-    MONGO_OK=1; break
-  fi
-  sleep 2; MONGO=$(pod mongodb)
+  [ $i -eq 60 ] && warn "MongoDB not ready after 60s — continuing anyway"
+  sleep 2
 done
-[ &quot;$MONGO_OK&quot; = 1 ] &amp;&amp; ok &quot;MongoDB is serving&quot; || warn &quot;MongoDB not confirmed serving after 60s (continuing, but inserts may fail)&quot;
 
-# ----- 2/9 Insert subscriber data -----------------------------------------
-echo &quot;=== 2/9 — Insert subscriber data (auth, subscription smData, POLICY smData) ===&quot;
-MONGO=$(pod mongodb)
-# Build a JS array of IMSIs for the mongosh script
-IMSI_JS=$(printf &#x27;&quot;%s&quot;,&#x27; &quot;${IMSIS[@]}&quot;); IMSI_JS=&quot;[${IMSI_JS%,}]&quot;
-
-kubectl exec -n &quot;$NS&quot; &quot;$MONGO&quot; -- mongosh free5gc --quiet --eval &quot;
-var IMSI = $IMSI_JS;
-var PLMN=&#x27;$PLMN&#x27;, SST=$SST, SD=&#x27;$SD&#x27;, KEY=&#x27;$SNSSAI_KEY&#x27;, DNN=&#x27;$DNN&#x27;;
-var K=&#x27;$K&#x27;, OPC=&#x27;$OPC&#x27;, SQN=&#x27;$SQN&#x27;, AMF=&#x27;$AMF_FIELD&#x27;;
-for (var i=0;i&lt;IMSI.length;i++){
-  var ue=IMSI[i];
-
-  // --- authenticationSubscription ---
-  db.subscriptionData.authenticationData.authenticationSubscription.replaceOne(
-    {ueId:ue},
-    { ueId:ue,
-      authenticationMethod:&#x27;5G_AKA&#x27;,
-      permanentKey:{permanentKeyValue:K, encryptionKey:0, encryptionAlgorithm:0},
-      sequenceNumber:SQN,
-      authenticationManagementField:AMF,
-      milenage:{op:{opValue:&#x27;&#x27;, encryptionKey:0, encryptionAlgorithm:0}},
-      opc:{opcValue:OPC, encryptionKey:0, encryptionAlgorithm:0} },
-    {upsert:true});
-
-  // --- AM data ---
-  db.subscriptionData.provisionedData.amData.replaceOne(
-    {ueId:ue, servingPlmnId:PLMN},
-    { ueId:ue, servingPlmnId:PLMN,
-      gpsis:[&#x27;msisdn-&#x27;],
-      subscribedUeAmbr:{uplink:&#x27;1 Gbps&#x27;, downlink:&#x27;2 Gbps&#x27;},
-      nssai:{ defaultSingleNssais:[{sst:SST, sd:SD}], singleNssais:[{sst:SST, sd:SD}] } },
-    {upsert:true});
-
-  // --- subscription smData (this is the one that returns 200 today) ---
-  var smSub={}; smSub[KEY]={
-    sst:SST, sd:SD,
-    dnnInfos:[{dnn:DNN, defaultDnnIndicator:true}]
-  };
-  db.subscriptionData.provisionedData.smfSelectionSubscriptionData.replaceOne(
-    {ueId:ue, servingPlmnId:PLMN},
-    { ueId:ue, servingPlmnId:PLMN, subscribedSnssaiInfos:smSub },
-    {upsert:true});
-
-  db.subscriptionData.provisionedData.smData.replaceOne(
-    {ueId:ue, servingPlmnId:PLMN, &#x27;singleNssai.sst&#x27;:SST, &#x27;singleNssai.sd&#x27;:SD},
-    { ueId:ue, servingPlmnId:PLMN,
-      singleNssai:{sst:SST, sd:SD},
-      dnnConfigurations:{ internet:{
-        pduSessionTypes:{defaultSessionType:&#x27;IPV4&#x27;, allowedSessionTypes:[&#x27;IPV4&#x27;]},
-        sscModes:{defaultSscMode:&#x27;SSC_MODE_1&#x27;, allowedSscModes:[&#x27;SSC_MODE_1&#x27;,&#x27;SSC_MODE_2&#x27;,&#x27;SSC_MODE_3&#x27;]},
-        &#x27;5gQosProfile&#x27;:{&#x27;5qi&#x27;:9, arp:{priorityLevel:8, preemptCap:&#x27;&#x27;, preemptVuln:&#x27;&#x27;}, priorityLevel:8},
-        sessionAmbr:{uplink:&#x27;200 Mbps&#x27;, downlink:&#x27;100 Mbps&#x27;} } } },
-    {upsert:true});
-
-  // --- POLICY smData  *** smPolicySnssaiData is TOP-LEVEL, no smPolicyData wrapper *** ---
-  var pol={}; pol[KEY]={
-    snssai:{sst:SST, sd:SD},
-    smPolicyDnnData:{ internet:{dnn:DNN} }
-  };
-  db.getCollection(&#x27;policyData.ues.smData&#x27;).replaceOne(
-    {ueId:ue},
-    { ueId:ue, smPolicySnssaiData:pol },
-    {upsert:true});
-
-  // --- AM policy (so PCF am-data lookups succeed) ---
-  db.getCollection(&#x27;policyData.ues.amData&#x27;).replaceOne(
-    {ueId:ue},
-    { ueId:ue, subscCats:[&#x27;free5gc&#x27;] },
-    {upsert:true});
+# ─────────────────────────────────────────────
+step "2/11 — Insert subscriber data (patched-UDM format)"
+kubectl exec -n free5gc mongodb-0 -- mongosh free5gc --eval '
+var IMSI_LIST = [
+  "imsi-208930000000001","imsi-208930000000002","imsi-208930000000003",
+  "imsi-208930000000004","imsi-208930000000005","imsi-208930000000006",
+  "imsi-208930000000007","imsi-208930000000008"
+];
+var KEY = "8baf473f2f8fd09487cccbd7097c6862";
+var OPC = "8e27b6af0e692e750f32667a3b14605d";
+for (var i = 0; i < IMSI_LIST.length; i++) {
+  var ueId = IMSI_LIST[i];
+  // authenticationSubscription — PATCHED-UDM format:
+  //   encPermanentKey / encOpcKey are STRINGS; sequenceNumber is an OBJECT.
+  //   NEVER use permanentKey/opc/milenage objects or a flat-string sequenceNumber.
+  db.subscriptionData.authenticationData.authenticationSubscription.replaceOne({ueId:ueId},{ueId:ueId,authenticationMethod:"5G_AKA",encPermanentKey:KEY,authenticationManagementField:"8000",encOpcKey:OPC,sequenceNumber:{sqn:"000000000100",lastIndexes:{ausf:0}}},{upsert:true});
+  db.subscriptionData.provisionedData.amData.replaceOne({ueId:ueId,servingPlmnId:"20893"},{ueId:ueId,servingPlmnId:"20893",gpsiList:["msisdn-090000000"+ueId.slice(-1)],subscribedUeAmbr:{uplink:"1 Gbps",downlink:"2 Gbps"},nssai:{defaultSingleNssais:[{sst:1,sd:"010203"}]}},{upsert:true});
+  db.subscriptionData.provisionedData.smfSelectionSubscriptionData.replaceOne({ueId:ueId,servingPlmnId:"20893"},{ueId:ueId,servingPlmnId:"20893",subscribedSnssaiInfos:{"01010203":{dnnInfos:[{dnn:"internet"}]}}},{upsert:true});
+  db.subscriptionData.provisionedData.smData.replaceOne({ueId:ueId,servingPlmnId:"20893"},{ueId:ueId,servingPlmnId:"20893",singleNssai:{sst:1,sd:"010203"},dnnConfigurations:{internet:{pduSessionTypes:{defaultSessionType:"IPV4",allowedSessionTypes:["IPV4"]},sscModes:{defaultSscMode:"SSC_MODE_1",allowedSscModes:["SSC_MODE_1","SSC_MODE_2","SSC_MODE_3"]},"5gQosProfile":{"5qi":9,arp:{priorityLevel:8,preemptCap:"",preemptVuln:""},priorityLevel:8},sessionAmbr:{uplink:"200 Mbps",downlink:"100 Mbps"}}}},{upsert:true});
+  db.policyData.ues.amData.replaceOne({ueId:ueId},{ueId:ueId,subscCats:["free5gc"]},{upsert:true});
+  db.policyData.ues.smData.replaceOne({ueId:ueId},{ueId:ueId,smPolicySnssaiData:{"01010203":{snssai:{sst:1,sd:"010203"},smPolicyDnnData:{internet:{dnn:"internet"}}}}},{upsert:true});
+  db.policyData.ues.flowRule.replaceOne({ueId:ueId},{ueId:ueId,flowRules:[]},{upsert:true});
+  db.policyData.ues.qosFlow.replaceOne({ueId:ueId},{ueId:ueId,qosFlows:[]},{upsert:true});
 }
-print(&#x27;Auth: &#x27;       + db.subscriptionData.authenticationData.authenticationSubscription.countDocuments());
-print(&#x27;Sub  smData: &#x27;+ db.subscriptionData.provisionedData.smData.countDocuments());
-print(&#x27;Pol  smData: &#x27;+ db.getCollection(&#x27;policyData.ues.smData&#x27;).countDocuments());
-// guard: policy doc must NOT have the smPolicyData wrapper
-var probe=db.getCollection(&#x27;policyData.ues.smData&#x27;).findOne({ueId:IMSI[0]});
-if (probe &amp;&amp; probe.smPolicyData) { print(&#x27;WARNING: policy doc still has smPolicyData wrapper!&#x27;); }
-else if (probe &amp;&amp; probe.smPolicySnssaiData) { print(&#x27;Policy doc structure OK (smPolicySnssaiData top-level)&#x27;); }
-&quot; &amp;&amp; ok &quot;subscriber data inserted&quot; || warn &quot;subscriber insert reported an error&quot;
+print("Auth: " + db.subscriptionData.authenticationData.authenticationSubscription.countDocuments());
+print("SM data: " + db.subscriptionData.provisionedData.smData.countDocuments());
+print("AM policy: " + db.policyData.ues.amData.countDocuments());
+print("SM policy: " + db.policyData.ues.smData.countDocuments());
 
-# ----- 3/9 Restart NRF -----------------------------------------------------
-echo &quot;=== 3/9 — Restart NRF ===&quot;
-kubectl rollout restart deployment -n &quot;$NS&quot; free5gc-v1-free5gc-nrf-nrf &gt;/dev/null
-kubectl rollout status  deployment -n &quot;$NS&quot; free5gc-v1-free5gc-nrf-nrf --timeout=90s &amp;&amp; ok &quot;NRF up&quot;
+// ---- GUARDS: fail loud if a format regression slips in ----
+var ap = db.subscriptionData.authenticationData.authenticationSubscription.findOne({ueId:IMSI_LIST[0]});
+if (ap && typeof ap.sequenceNumber === "string") {
+  print("WARNING: sequenceNumber is a STRING — UDM will throw unmarshal error / AUSF 500 / AMF CONGESTION!");
+} else if (ap && ap.sequenceNumber && ap.sequenceNumber.sqn) {
+  print("GUARD OK: sequenceNumber is object (sqn=" + ap.sequenceNumber.sqn + ")");
+}
+if (ap && ap.permanentKey) {
+  print("WARNING: auth doc uses old permanentKey object — patched UDM expects encPermanentKey string!");
+} else if (ap && ap.encPermanentKey) {
+  print("GUARD OK: key format is encPermanentKey/encOpcKey (patched-UDM)");
+}
+var sp = db.policyData.ues.smData.findOne({ueId:IMSI_LIST[0]});
+if (sp && sp.smPolicyData) {
+  print("WARNING: policy smData still has smPolicyData wrapper — UDR will 404 on PDU establishment!");
+} else if (sp && sp.smPolicySnssaiData) {
+  print("GUARD OK: policy smData is top-level smPolicySnssaiData");
+}
+print("All 8 subscribers inserted (patched-UDM format, SQN=000000000100)");
+'
 
-# ----- 4/9 Restart all NFs (re-register with NRF) -------------------------
-echo &quot;=== 4/9 — Restart NFs (order: ausf udm udr pcf nssf amf smf) ===&quot;
-for nf in ausf udm udr pcf nssf amf smf; do
-  kubectl rollout restart deployment -n &quot;$NS&quot; &quot;free5gc-v1-free5gc-${nf}-${nf}&quot; &gt;/dev/null
+# ─────────────────────────────────────────────
+step "3/11 — Reload gtp5g on all UPF nodes"
+echo "Deleting UPF pods..."
+kubectl delete -n free5gc $(kubectl get pod -n free5gc -o name | grep upf) 2>/dev/null
+echo "Waiting for pods to terminate..."
+sleep 15
+
+echo "Reloading gtp5g on all UPF nodes..."
+for node in 92 93 94; do
+  ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 localadmin@10.160.101.$node \
+    "sudo rmmod gtp5g 2>/dev/null; sudo modprobe gtp5g" 2>/dev/null \
+    && echo "  .$node: gtp5g reloaded ✓" || warn ".$node: gtp5g reload failed (may need password)"
 done
-for nf in ausf udm udr pcf nssf amf smf; do
-  kubectl rollout status deployment -n &quot;$NS&quot; &quot;free5gc-v1-free5gc-${nf}-${nf}&quot; --timeout=90s &gt;/dev/null \
-    &amp;&amp; ok &quot;$nf up&quot; || warn &quot;$nf rollout slow/failed&quot;
+
+echo "Waiting for UPF pods to restart on fresh gtp5g..."
+for i in $(seq 1 60); do
+  UPFB=$(kubectl get pod -n free5gc -l app=free5gc-v1-free5gc-upf-upfb -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null)
+  UPF1=$(kubectl get pod -n free5gc -l app=free5gc-v1-free5gc-upf-upf1 -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null)
+  UPF2=$(kubectl get pod -n free5gc -l app=free5gc-v1-free5gc-upf-upf2 -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null)
+  if [ "$UPFB" = "true" ] && [ "$UPF1" = "true" ] && [ "$UPF2" = "true" ]; then
+    echo "All 3 UPF pods running"
+    break
+  fi
+  [ $i -eq 60 ] && warn "UPF pods not ready after 120s"
+  sleep 2
 done
 
-# ----- 5/9 Verify patched SMF binary --------------------------------------
-echo &quot;=== 5/9 — Verify patched SMF binary ===&quot;
-SMF=$(pod smf)
-SIZE=$(kubectl exec -n &quot;$NS&quot; -c smf &quot;$SMF&quot; -- stat -c%s /free5gc/bin/smf 2&gt;/dev/null)
-if [ &quot;$SIZE&quot; = &quot;$SMF_BIN_SIZE&quot; ]; then
-  ok &quot;SMF binary $SIZE bytes (patched)&quot;
+# Verify upfgtp device exists
+upf1=$(kubectl get pod -n free5gc -o name | grep upf-upf1 | head -1)
+kubectl exec -n free5gc $upf1 -c upf1 -- ip link show upfgtp 2>/dev/null \
+  && echo "  upfgtp device confirmed ✓" || warn "upfgtp missing — UPF may need another pod restart"
+
+# ─────────────────────────────────────────────
+step "4/11 — Ensure PCF is scaled up"
+PCF_REPLICAS=$(kubectl get deploy free5gc-v1-free5gc-pcf-pcf -n free5gc -o jsonpath='{.spec.replicas}' 2>/dev/null)
+if [ "$PCF_REPLICAS" = "0" ]; then
+  kubectl scale deploy/free5gc-v1-free5gc-pcf-pcf -n free5gc --replicas=1
+  echo "PCF scaled up from 0 → 1"
+  sleep 5
 else
-  warn &quot;SMF binary is &#x27;${SIZE:-empty}&#x27; bytes (expected $SMF_BIN_SIZE) — run ~/rebuild-smf.sh if steering 404s on /nsmf-steering&quot;
+  echo "PCF already at $PCF_REPLICAS replicas"
 fi
 
-# ----- 6/9 Verify PFCP associations ---------------------------------------
-echo &quot;=== 6/9 — Verify PFCP associations (expect 3) ===&quot;
-SMF=$(pod smf)
-ACC=$(kubectl logs -n &quot;$NS&quot; -c smf &quot;$SMF&quot; 2&gt;/dev/null | grep -c &quot;Association Setup Accepted&quot;)
-if [ &quot;${ACC:-0}&quot; -ge 3 ]; then
-  ok &quot;$ACC associations&quot;
-else
-  warn &quot;$ACC/3 associations — UPFs may have come up after SMF; restarting SMF once to re-associate&quot;
-  kubectl rollout restart deployment -n &quot;$NS&quot; free5gc-v1-free5gc-smf-smf &gt;/dev/null
-  kubectl rollout status  deployment -n &quot;$NS&quot; free5gc-v1-free5gc-smf-smf --timeout=90s &gt;/dev/null
-  sleep 8
-  SMF=$(pod smf)
-  ACC=$(kubectl logs -n &quot;$NS&quot; -c smf &quot;$SMF&quot; 2&gt;/dev/null | grep -c &quot;Association Setup Accepted&quot;)
-  [ &quot;${ACC:-0}&quot; -ge 3 ] &amp;&amp; ok &quot;$ACC associations after SMF restart&quot; \
-    || warn &quot;$ACC/3 — check UPF pods are 1/1 Running and gtp5g 0.9.x is loaded on the nodes&quot;
-fi
-
-# ----- 7/9 Data-plane fixes: UPF NAT (flush AND re-add) -------------------
-echo &quot;=== 7/9 — UPF NAT (flush + re-add MASQUERADE) and DN return routes ===&quot;
-UPF1=$(pod upf-upf1); UPF2=$(pod upf-upf2)
-if [ -n &quot;$UPF1&quot; ]; then
-  kubectl exec -n &quot;$NS&quot; -c upf1 &quot;$UPF1&quot; -- sh -c \
-    &#x27;iptables -t nat -F; iptables -t nat -A POSTROUTING -s 10.61.0.0/16 -o n6 -j MASQUERADE&#x27; \
-    &amp;&amp; ok &quot;upf1 NAT (10.61) set&quot; || warn &quot;upf1 NAT failed&quot;
-else warn &quot;upf1 pod not found&quot;; fi
-if [ -n &quot;$UPF2&quot; ]; then
-  kubectl exec -n &quot;$NS&quot; -c upf2 &quot;$UPF2&quot; -- sh -c \
-    &#x27;iptables -t nat -F; iptables -t nat -A POSTROUTING -s 10.62.0.0/16 -o n6 -j MASQUERADE; iptables -t nat -A POSTROUTING -s 10.61.0.0/16 -o n6 -j MASQUERADE&#x27; \
-    &amp;&amp; ok &quot;upf2 NAT (10.62 + 10.61 for Option-1 steering) set&quot; || warn &quot;upf2 NAT failed&quot;
-else warn &quot;upf2 pod not found&quot;; fi
-
-echo &quot;    DN return routes on $DN_HOST (you may be prompted for the SSH password)...&quot;
-ssh -o StrictHostKeyChecking=no &quot;${DN_USER}@${DN_HOST}&quot; \
-  &#x27;sudo ip route replace 10.61.0.0/16 via 10.160.101.123 2&gt;/dev/null; sudo ip route replace 10.62.0.0/16 via 10.160.101.133 2&gt;/dev/null; echo done&#x27; \
-  &amp;&amp; ok &quot;DN routes set&quot; || warn &quot;DN route setup failed (check $DN_HOST manually)&quot;
-
-# ----- 8/9 SMF port-forward (8000:80, writable log) -----------------------
-echo &quot;=== 8/9 — SMF API port-forward 127.0.0.1:8000 -&gt; SMF:80 ===&quot;
-pkill -f &quot;port-forward.*8000&quot; 2&gt;/dev/null; sleep 1
-SMF=$(pod smf)
-kubectl port-forward -n &quot;$NS&quot; &quot;$SMF&quot; 8000:80 &gt;&quot;$PF_LOG&quot; 2&gt;&amp;1 &amp;
+# ─────────────────────────────────────────────
+step "5/11 — Restart NRF"
+kubectl rollout restart deployment/free5gc-v1-free5gc-nrf-nrf -n free5gc
+kubectl rollout status deployment/free5gc-v1-free5gc-nrf-nrf -n free5gc --timeout=60s
 sleep 3
-CODE=$(curl -s -o /dev/null -w &#x27;%{http_code}&#x27; http://127.0.0.1:8000/ 2&gt;/dev/null)
-if [ &quot;$CODE&quot; != &quot;000&quot; ] &amp;&amp; [ -n &quot;$CODE&quot; ]; then
-  ok &quot;port-forward up (SMF reachable, HTTP $CODE)&quot;
+
+# ─────────────────────────────────────────────
+step "6/11 — Restart all NFs (re-register with NRF)"
+for nf in ausf udm udr pcf nssf amf smf; do
+  dep=$(kubectl get deploy -n free5gc -o name | grep "$nf" | head -1)
+  if [ -n "$dep" ]; then
+    kubectl rollout restart -n free5gc $dep
+    echo "  Restarted $dep"
+  fi
+done
+echo "Waiting for rollouts..."
+for nf in ausf udm udr pcf nssf amf smf; do
+  dep=$(kubectl get deploy -n free5gc -o name | grep "$nf" | head -1)
+  [ -n "$dep" ] && kubectl rollout status -n free5gc $dep --timeout=60s 2>/dev/null
+done
+echo "All NFs restarted"
+
+# ─────────────────────────────────────────────
+step "7/11 — Verify patched SMF binary"
+smf=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1)
+SMF_SIZE=$(kubectl exec -n free5gc $smf -c smf -- stat -c%s /free5gc/bin/smf 2>/dev/null)
+if [ "$SMF_SIZE" = "32442720" ]; then
+  echo "Patched SMF binary confirmed (32442720 bytes)"
 else
-  warn &quot;port-forward dead (got &#x27;$CODE&#x27;) — see $PF_LOG&quot;
+  warn "SMF binary is $SMF_SIZE bytes (expected 32442720)"
+  warn "Run ~/rebuild-smf.sh to fix, then re-run this script"
 fi
 
-# ----- 9/9 Summary ---------------------------------------------------------
-echo &quot;=== 9/9 — Summary ===&quot;
-kubectl get pods -n &quot;$NS&quot; | grep -E &#x27;upf|smf|udr|pcf&#x27; || true
-cat &lt;&lt;EOF
+# ─────────────────────────────────────────────
+step "8/11 — Verify PFCP associations"
+sleep 5
+kubectl logs -n free5gc $smf -c smf | grep -i "association setup accepted" | tail -3
+ASSOC_COUNT=$(kubectl logs -n free5gc $smf -c smf | grep -ci "association setup accepted")
+if [ "$ASSOC_COUNT" -ge 3 ]; then
+  echo "All 3 PFCP associations up"
+else
+  warn "Only $ASSOC_COUNT PFCP associations (expected 3)"
+fi
 
-Next, on the gNB/UE node (.95):
-  sudo killall -9 nr-gnb nr-ue 2&gt;/dev/null; sleep 2
-  cd ~/ueransim
-  ./build/nr-gnb -c config/free5gc-gnb.yaml &amp;
-  sleep 3
-  sudo ./build/nr-ue -c config/ue-multi.yaml -n 8
+# ─────────────────────────────────────────────
+step "9/11 — Apply runtime data-plane fixes"
+upf1=$(kubectl get pod -n free5gc -o name | grep upf-upf1 | head -1)
+upf2=$(kubectl get pod -n free5gc -o name | grep upf-upf2 | head -1)
 
-Then test:
-  ping -I uesimtun0 $DN_HOST -c 4              # baseline via AnchorUPF1 (.123)
-  ./steering-k8s.sh 10.160.101.131            # steer to AnchorUPF2 (.133)
-  ./steering-k8s.sh 10.160.101.144            # steer back to AnchorUPF1 (.123)
+kubectl exec -n free5gc $upf1 -c upf1 -- ip route replace 10.160.101.145/32 dev n6 2>/dev/null && echo "  AnchorUPF1: N6 route ✓" || warn "AnchorUPF1 route failed"
+kubectl exec -n free5gc $upf1 -c upf1 -- iptables -t nat -F 2>/dev/null && echo "  AnchorUPF1: NAT flushed ✓" || true
+kubectl exec -n free5gc $upf2 -c upf2 -- ip route replace 10.160.101.145/32 dev n6 2>/dev/null && echo "  AnchorUPF2: N6 route ✓" || warn "AnchorUPF2 route failed"
+kubectl exec -n free5gc $upf2 -c upf2 -- iptables -t nat -F 2>/dev/null && echo "  AnchorUPF2: NAT flushed ✓" || true
 
-If UPFs are CrashLoopBackOff: check gtp5g on each UPF node —
-  cat /sys/module/gtp5g/version   (must be 0.9.x; rebuild from ~/gtp5g if 0.8.6)
-EOF
-ok &quot;cold-start complete&quot;
+ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 localadmin@10.160.101.145 \
+  "sudo ip route replace 10.61.0.0/16 via 10.160.101.123; sudo ip route replace 10.62.0.0/16 via 10.160.101.133" 2>/dev/null \
+  && echo "  DN server: return routes ✓" || warn "DN routes failed (SSH to .145 — may need password)"
+
+# ─────────────────────────────────────────────
+step "10/11 — Restart port-forward to SMF"
+pkill -f "port-forward.*8000" 2>/dev/null; sleep 1
+smf_name=$(kubectl get pod -n free5gc -o name | grep smf | grep -v ausf | head -1 | sed 's|pod/||')
+kubectl port-forward -n free5gc $smf_name 8000:80 >/tmp/pf.log 2>&1 &
+sleep 3
+PF_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/ 2>/dev/null)
+if [ "$PF_STATUS" = "404" ]; then
+  echo "Port-forward alive (SMF reachable)"
+else
+  warn "Port-forward may be dead (got $PF_STATUS)"
+fi
+
+# ─────────────────────────────────────────────
+step "11/11 — Summary"
+echo ""
+echo "All done. Now on .95:"
+echo ""
+echo "  sudo killall -9 nr-gnb nr-ue 2>/dev/null; sleep 2"
+echo "  cd ~/ueransim"
+echo "  ./build/nr-gnb -c config/free5gc-gnb.yaml &"
+echo "  sleep 3"
+echo "  sudo ./build/nr-ue -c config/ue-multi.yaml -n 8"
+echo ""
+echo "Then test:"
+echo "  ping -I uesimtun0 10.160.101.145 -c 4"
+echo "  ./steering-k8s.sh 10.160.101.131"
+echo ""
+echo "If UEs fail with CONGESTION after an AMF SCTP-flood experiment:"
+echo "  kubectl rollout restart deploy/free5gc-v1-free5gc-amf-amf -n free5gc"
+echo "  then relaunch gNB+UEs. If auth still fails (AUSF 500/403), re-run this script."
+echo ""
 </code></pre>
 
     <h3>Manual Recovery Steps</h3>
@@ -2188,7 +2156,8 @@ ok &quot;cold-start complete&quot;
 
     <h4><span class="step-num">1</span> Fix MongoDB probes + reload gtp5g on UPF nodes</h4>
     <p>MongoDB 6.0 uses <code>mongosh</code>, not <code>mongo</code>. The Helm chart installs probes with the deprecated
-      <code>mongo</code> CLI, causing liveness failures, pod restarts, and data loss. Fix permanently:</p>
+      <code>mongo</code> CLI, causing liveness failures, pod restarts, and data loss. Fix permanently:
+    </p>
     <pre><code><span class="comment"># Fix MongoDB probes (one-time, persists across restarts)</span>
 kubectl patch statefulset mongodb -n free5gc --type='json' -p='[
   {"op":"replace","path":"/spec/template/spec/containers/0/livenessProbe/exec/command",
@@ -2352,7 +2321,8 @@ ping -I uesimtun0 10.160.101.145 -c 4
         <td>Re-insert <code>policyData.ues.amData</code> with flat <code>{subscCats:[...]}</code> (not
           <code>{uesAmPolicyData:{subscCats:[...]}}</code>) and <code>policyData.ues.smData</code> with flat
           <code>{smPolicySnssaiData:{...}}</code> (not <code>{smPolicyData:{smPolicySnssaiData:{...}}}</code>). Run
-          <code>cold-start.sh</code> which uses the correct format.</td>
+          <code>cold-start.sh</code> which uses the correct format.
+        </td>
       </tr>
       <tr>
         <td>SMF panic at <code>pdu_session.go:194</code> after switching to stock PCF</td>
@@ -2387,7 +2357,8 @@ ping -I uesimtun0 10.160.101.145 -c 4
         <td>SQN out of range (Authentication Failure)</td>
         <td>MongoDB SQN reset to 0 but UEs' local SQN counter is ahead</td>
         <td>Bump SQN in MongoDB: <code>updateMany({}, {$set: {"sequenceNumber.sqn": "000000000100"}})</code>. The
-          <code>cold-start.sh</code> inserts with SQN=100 by default.</td>
+          <code>cold-start.sh</code> inserts with SQN=100 by default.
+        </td>
       </tr>
       <tr>
         <td>UPF log: <code>CreatePDR error: no such file or directory</code> / <code>upfgtp does not exist</code></td>
