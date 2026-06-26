@@ -19,15 +19,11 @@ A compact repository for free5GC ULCL (Uplink Classifier) traffic steering imple
 
 **Startup order:** I-UPF → PSA-UPF → PSA-UPF-B → free5GC Core → gNB → UE
 
-**Requirements:**
-
-```bash
-pip install paramiko
-```
-
 **Usage:**
 
 ```bash
+pip install -r requirements.txt
+
 python app.py
 ```
 
