@@ -1040,14 +1040,12 @@
         <a href="#usage"><span class="nav-num">10</span> Using the API</a>
         <a href="#verify"><span class="nav-num">11</span> Verification</a>
         <a href="#troubleshoot"><span class="nav-num">12</span> Troubleshooting</a>
-        <div class="nav-chapter">Use Cases</div>
-        <a href="#scenario1"><span class="nav-num">13</span> Scenario 1 &mdash; Invisible Redirect</a>
-        <a href="#scenario2"><span class="nav-num">14</span> Scenario 2 &mdash; ULCL Exhaustion</a>
-        <a href="#scenario3"><span class="nav-num">15</span> Scenario 3 &mdash; Self-Healing Agent</a>
+        <div class="nav-chapter">Use Case</div>
+        <a href="#scenario3"><span class="nav-num">13</span> Self-Healing Agent</a>
         <div class="nav-chapter">Multiple UEs</div>
-        <a href="#multiue"><span class="nav-num">16</span> Multi-UE Steering</a>
+        <a href="#multiue"><span class="nav-num">14</span> Multi-UE Steering</a>
         <div class="nav-chapter">References</div>
-        <a href="#links"><span class="nav-num">17</span> Helpful Links</a>
+        <a href="#links"><span class="nav-num">15</span> Helpful Links</a>
 
         <!-- <div class="nav-chapter"></div> -->
         <a href="k8s-guide.html"
@@ -1565,7 +1563,7 @@ go build -o ~/free5gc/bin/smf ./cmd/</code></pre>
             Lives at <code>NFs/smf/internal/sbi/processor/steering.go</code>.
             Implements <code>HandleSteerTraffic</code>, the handler wired up by <code>api_steering.go</code>
             above.
-            Contains two key bug-fixes required for multi-UE operation — see &sect;&nbsp;16 for full diffs
+            Contains two key bug-fixes required for multi-UE operation — see &sect;&nbsp;14 for full diffs
             and root-cause analysis.
           </div>
         </div>
@@ -1923,3 +1921,830 @@ sudo ip route add 10.60.0.0/16 via 10.160.101.198 metric 200</code></pre>
             PSA-UPF2) with no session interruption confirmed on free5GC v3.3.0 with gtp5g v0.8.6.</div>
         </div>
       </section>
+
+
+
+      <section id="scenario3">
+        <div class="section-label"><span class="section-num">&sect; 13</span><span class="section-rule"></span></div>
+        <h2>Self-Healing Agent</h2>
+        <p>The use case that ties the whole testbed together: an autonomous agent running on
+          <code>free5gc-core</code> that detects a GTP-U flood from live traffic and heals the network on its own,
+          with no human in the loop. Its "brain" is an LSTM classifier; its hands are the Dynamic Steering API from
+          &sect;&nbsp;07. When it confirms an attack it steers <strong>only the malicious UEs</strong> onto the backup
+          anchor, leaving the legitimate UEs on their original path completely untouched.</p>
+
+        <h3>Closed loop at a glance</h3>
+        <p>Every two seconds the agent runs two probes concurrently, feeds the result to the LSTM, and &mdash; once an
+          attack persists past a short confirmation window &mdash; issues per-UE steering calls:</p>
+        <div class="path-card">
+          <div class="path-item path-default">
+            <div class="path-badge">Sense</div>
+            <div class="path-route">ping loss (N9) <span class="path-arrow">+</span> GTP-U pps (ens18)</div>
+            <div class="path-trigger">11 flow features collected from I-UPF each poll</div>
+          </div>
+          <div class="path-item path-steered">
+            <div class="path-badge">Decide &amp; Act</div>
+            <div class="path-route">LSTM class <span class="path-arrow">&rarr;</span> confirm <span
+                class="path-arrow">&rarr;</span> steer</div>
+            <div class="path-trigger">Malicious SUPIs &rarr; PSA-UPF2 via <code>/nsmf-steering/v1/steer</code></div>
+          </div>
+        </div>
+
+        <h3>Roles &amp; addresses</h3>
+        <div class="vm-table-wrap">
+          <table class="vm-table">
+            <thead>
+              <tr>
+                <th>Constant</th>
+                <th>Value</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>I_UPF_IP</td>
+                <td>10.160.101.143</td>
+                <td>Flood probe + ping source (SSH target, ens18)</td>
+              </tr>
+              <tr>
+                <td>FREE5GC_IP</td>
+                <td>10.160.101.137</td>
+                <td>Core &mdash; runs the steering curl calls</td>
+              </tr>
+              <tr>
+                <td>MONITOR_IP</td>
+                <td>10.160.101.148</td>
+                <td>PSA-UPF (active) &mdash; normal UEs stay here</td>
+              </tr>
+              <tr>
+                <td>FAILOVER_IP</td>
+                <td>10.160.101.198</td>
+                <td>PSA-UPF2 (backup) &mdash; malicious UEs steered here</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>UE assignment</h3>
+        <div class="vm-table-wrap">
+          <table class="vm-table">
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>SUPIs</th>
+                <th>On healing</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Normal (6)</td>
+                <td>imsi-&hellip;008, &hellip;001, &hellip;003, &hellip;006, &hellip;002, &hellip;004</td>
+                <td>Kept on PSA-UPF (10.160.101.148)</td>
+              </tr>
+              <tr>
+                <td>Malicious (2)</td>
+                <td>imsi-&hellip;007 (uesimtun0), imsi-&hellip;005 (uesimtun1)</td>
+                <td>Steered to PSA-UPF2 (10.160.101.198)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Detection &mdash; LSTM only</h3>
+        <p>There is no hand-tuned threshold in the decision path. Each poll's 11 features are scaled and passed through
+          the classifier, which emits a class label. The label alone drives the response:</p>
+        <div class="vm-table-wrap">
+          <table class="vm-table">
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Label</th>
+                <th>Response</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>0</td>
+                <td>NORMAL</td>
+                <td>No action; detection state reset</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>GTP_FLOOD</td>
+                <td>Steer the 2 malicious UEs only</td>
+              </tr>
+              <tr>
+                <td>other &ne; 0</td>
+                <td>GRAY_FAILURE</td>
+                <td>Steer ALL 8 UEs to the backup anchor</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout callout-warn"><span class="callout-icon">&#9888;</span>
+          <div class="callout-body"><strong>Confirmation window</strong>A detected attack must persist longer than
+            <code>CONFIRM_SECS = 4</code> before healing fires. A single noisy poll will not trigger steering; if the
+            signal clears first, the timer resets.</div>
+        </div>
+
+        <h3>Feature vector (11 inputs)</h3>
+        <p>Collected per poll from I-UPF's <code>ens18</code> via
+          <code>tcpdump -tt -nn 'udp port 2152' -c 1000</code> (2&nbsp;s window):
+          <code>packet_count</code>, <code>byte_count</code>, <code>avg_packet_size</code>,
+          <code>min_packet_size</code>, <code>max_packet_size</code>, <code>packet_size_variance</code>,
+          <code>inter_arrival_time_mean</code>, <code>inter_arrival_time_variance</code>,
+          <code>packet_rate_pps</code>, <code>ul_bitrate</code>, <code>dl_bitrate</code>.</p>
+
+        <h3>Healing action</h3>
+        <p>On a confirmed <code>GTP_FLOOD</code>, <code>steer_list()</code> SSHes into the core and POSTs one steering
+          request per malicious SUPI to <code>http://127.0.0.2:8000/nsmf-steering/v1/steer</code>. It parses the
+          <code>X-Debug-FAR</code> response header for each call, records the updated <code>FARID</code>s, and treats
+          the heal as successful only if every targeted UE returns a FARID. The agent then prints its convergence
+          metrics (attack type, pps at detection, time-to-heal, total convergence, and the normal/malicious split) and
+          exits.</p>
+
+        <h3>Running it</h3>
+        <div class="callout callout-info"><span class="callout-icon">&#9432;</span>
+          <div class="callout-body"><strong>Prerequisites</strong>Passwordless SSH from the agent host to both
+            <code>free5gc-core</code> and <code>i-upf</code>; passwordless <code>sudo tcpdump</code> on i-upf; and the
+            three model assets present under <code>model/</code>
+            (<code>lstm_attack_classifier.pth</code>, <code>scaler.pkl</code>, <code>label_encoder.pkl</code>).</div>
+        </div>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">bash</span></div><button class="copy-btn"
+              onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>cd ~/agent
+python3 agent_main.py</code></pre>
+        </div>
+        <p>At startup the agent logs its configuration banner (monitored anchors, normal vs. malicious SUPIs,
+          confirmation delay) and then one line per poll showing N9 loss and the observed GTP-U pps, so you can watch
+          the flood build and the heal fire in real time.</p>
+
+        <h3>agent_main.py</h3>
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-dots"><span></span><span></span><span></span></div>
+            <div class="code-meta"><span class="code-lang">python</span><span class="code-file">agent/agent_main.py</span>
+            </div><button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>#!/usr/bin/env python3
+import subprocess, time, re, logging, threading
+import joblib
+import torch
+import torch.nn as nn
+import numpy as np
+
+# ─────────────────────────────────────────────
+# CONFIG
+# ─────────────────────────────────────────────
+I_UPF_IP       = "10.160.101.143"
+I_UPF_USER     = "localadmin"
+FREE5GC_IP     = "10.160.101.137"
+FREE5GC_USER   = "localadmin"
+MONITOR_IP     = "10.160.101.148"        # psa-upf  (active)
+FAILOVER_IP    = "10.160.101.198"        # psa-upf2 (backup)
+
+SUPI_NORMAL = [
+    "imsi-208930000000008",  # uesimtun2 → 10.61.0.3        
+    "imsi-208930000000001",  # uesimtun3 → 10.61.0.4        
+    "imsi-208930000000003",  # uesimtun4 → 10.61.0.5        
+    "imsi-208930000000006",  # uesimtun5 → 10.61.0.6        
+    "imsi-208930000000002",  # uesimtun6 → 10.61.0.7        
+    "imsi-208930000000004",  # uesimtun7 → 10.61.0.8        
+]
+
+# Malicious UEs → steered to PSA-UPF2 on GTP_FLOOD
+SUPI_MALICIOUS = [
+    "imsi-208930000000007",  # uesimtun0 → 10.61.0.1
+    "imsi-208930000000005",  # uesimtun1 → 10.61.0.2
+]
+
+STEER_URL      = "http://127.0.0.2:8000/nsmf-steering/v1/steer"
+CONFIRM_SECS   = 4
+
+# LSTM classifier assets
+CLASSIFIER_MODEL  = "model/lstm_attack_classifier.pth"
+CLASSIFIER_SCALER = "model/scaler.pkl"
+CLASSIFIER_LE     = "model/label_encoder.pkl"
+
+CLASS_NORMAL    = 0
+CLASS_GTP_FLOOD = 4  # confirmed from your LSTM output
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+log = logging.getLogger()
+
+
+# ─────────────────────────────────────────────
+# 1. LSTM MODEL DEFINITION
+# ─────────────────────────────────────────────
+class LSTMAttackClassifier(nn.Module):
+    def __init__(self, input_size, hidden_size=64, num_layers=2, num_classes=5):
+        super().__init__()
+        self.lstm    = nn.LSTM(input_size, hidden_size, num_layers,
+                               batch_first=True, dropout=0.2)
+        self.fc      = nn.Linear(hidden_size, num_classes)
+        self.dropout = nn.Dropout(0.2)
+
+    def forward(self, x):
+        _, (hn, _) = self.lstm(x)
+        out = self.dropout(hn[-1])
+        return self.fc(out)
+
+
+# ─────────────────────────────────────────────
+# 2. LOAD CLASSIFIER ASSETS
+# ─────────────────────────────────────────────
+def load_classifier():
+    try:
+        import warnings
+        warnings.filterwarnings("ignore")
+
+        scaler = joblib.load(CLASSIFIER_SCALER)
+        le     = joblib.load(CLASSIFIER_LE)
+
+        input_size  = scaler.n_features_in_
+        num_classes = len(le.classes_)
+
+        model = LSTMAttackClassifier(input_size=input_size, num_classes=num_classes)
+        model.load_state_dict(torch.load(CLASSIFIER_MODEL, map_location='cpu'))
+        model.eval()
+
+        log.info(f"[CLASSIFIER] Loaded — input_size={input_size}, classes={le.classes_}")
+        return model, scaler, le
+
+    except Exception as e:
+        log.error(f"[CLASSIFIER] Failed to load: {e}")
+        log.error("LSTM model is required. Cannot run without classifier.")
+        raise SystemExit(1)
+
+
+# ─────────────────────────────────────────────
+# 3. FEATURE COLLECTION
+# ─────────────────────────────────────────────
+FEATURE_COLS = [
+    "packet_count", "byte_count", "avg_packet_size",
+    "min_packet_size", "max_packet_size", "packet_size_variance",
+    "inter_arrival_time_mean", "inter_arrival_time_variance",
+    "packet_rate_pps", "ul_bitrate", "dl_bitrate"
+]
+
+def collect_flood_features():
+    empty_features = {col: 0.0 for col in FEATURE_COLS}
+
+    try:
+        start = time.time()
+        cmd   = "sudo tcpdump -i ens18 -tt -nn 'udp port 2152' -c 1000"
+
+        r = subprocess.run(
+            ["ssh", f"{I_UPF_USER}@{I_UPF_IP}", cmd],
+            capture_output=True, text=True, timeout=2
+        )
+
+        elapsed   = time.time() - start
+        lines     = [l for l in r.stdout.splitlines() if "UDP" in l and "length" in l]
+        pkt_count = len(lines)
+
+        if pkt_count == 0:
+            return empty_features, 0
+
+        timestamps = []
+        sizes      = []
+
+        for line in lines:
+            ts_match = re.match(r'^(\d+\.\d+)', line)
+            if ts_match:
+                timestamps.append(float(ts_match.group(1)))
+
+            sz_match = re.search(r'length\s+(\d+)', line, re.IGNORECASE)
+            if sz_match:
+                sizes.append(int(sz_match.group(1)))
+
+        if not sizes:
+            return empty_features, 0
+
+        sizes_arr  = np.array(sizes, dtype=np.float64)
+        byte_count = float(sizes_arr.sum())
+        pkt_rate   = pkt_count / elapsed if elapsed &gt; 0 else 0
+        ul_bitrate = (byte_count * 8) / elapsed if elapsed &gt; 0 else 0
+
+        if len(timestamps) &gt;= 2:
+            iats     = np.diff(sorted(timestamps))
+            iat_mean = float(iats.mean())
+            iat_var  = float(iats.var())
+        else:
+            iat_mean = 0.0
+            iat_var  = 0.0
+
+        features = {
+            "packet_count"               : float(pkt_count),
+            "byte_count"                 : byte_count,
+            "avg_packet_size"            : float(sizes_arr.mean()),
+            "min_packet_size"            : float(sizes_arr.min()),
+            "max_packet_size"            : float(sizes_arr.max()),
+            "packet_size_variance"       : float(sizes_arr.var()),
+            "inter_arrival_time_mean"    : iat_mean,
+            "inter_arrival_time_variance": iat_var,
+            "packet_rate_pps"            : pkt_rate,
+            "ul_bitrate"                 : ul_bitrate,
+            "dl_bitrate"                 : 0.0,
+        }
+
+        return features, int(pkt_rate)
+
+    except subprocess.TimeoutExpired:
+        return empty_features, 0
+    except Exception as e:
+        log.warning(f"[COLLECTOR] Failed: {e}")
+        return empty_features, 0
+
+
+# ─────────────────────────────────────────────
+# 4. INFERENCE HELPER
+# ─────────────────────────────────────────────
+def classify_metrics(model, scaler, le, metrics: dict) -&gt; int:
+    try:
+        row        = np.array([[metrics.get(col, 0.0) for col in FEATURE_COLS]], dtype=np.float32)
+        row_scaled = scaler.transform(row)
+        tensor     = torch.FloatTensor(row_scaled).unsqueeze(1)
+
+        with torch.no_grad():
+            outputs = model(tensor)
+            _, pred = torch.max(outputs, 1)
+
+        return int(le.inverse_transform(pred.numpy())[0])
+
+    except Exception as e:
+        log.warning(f"[CLASSIFIER] Inference error: {e}")
+        return CLASS_NORMAL
+
+
+# ─────────────────────────────────────────────
+# 5. AGENT HELPERS
+# ─────────────────────────────────────────────
+def ping_loss_detail(ip):
+    r = subprocess.run(
+        ["ssh", f"{I_UPF_USER}@{I_UPF_IP}",
+         f"ping -c 10 -i 0.2 -W 1 {ip}"],
+        capture_output=True, text=True)
+
+    loss = 100.0
+    sent = received = lost = 0
+    seqs = []
+
+    for line in r.stdout.splitlines():
+        seq_match = re.search(r'icmp_seq=(\d+)', line)
+        if seq_match:
+            seqs.append(int(seq_match.group(1)))
+
+        if "packet loss" in line:
+            parts = line.split(",")
+            try:
+                sent     = int(parts[0].strip().split()[0])
+                received = int(parts[1].strip().split()[0])
+                lost     = sent - received
+                loss     = float(parts[2].strip().split("%")[0])
+            except Exception:
+                pass
+
+    return loss, sent, received, lost, seqs[0] if seqs else None, seqs[-1] if seqs else None
+
+
+def steer_list(supi_list, target_ip):
+    """
+    SSH into free5gc-core and run steering logic for the given SUPI list.
+    Mirrors steering.sh logic exactly.
+    Returns True if ALL UEs steered successfully.
+    """
+    supi_array = " ".join(f'"{s}"' for s in supi_list)
+
+    bash_cmd = f"""
+SUPI_LIST=({supi_array})
+TARGET="{target_ip}"
+SUCCESS=0
+FAIL=0
+printf "%-28s | %-10s | %-20s\\n" "SUPI" "STATUS" "FARIDs"
+echo "------------------------------------------------------------"
+for SUPI in "${{SUPI_LIST[@]}}"; do
+    RESULT=$(curl -s -v -X POST http://127.0.0.2:8000/nsmf-steering/v1/steer \\
+        -H 'Content-Type: application/json' \\
+        -d "{{\\\"supi\\\":\\\"$SUPI\\\",\\\"targetUpf\\\":\\\"$TARGET\\\"}}" 2&gt;&amp;1)
+    FARIDS=$(echo "$RESULT" | grep -i "x-debug-far" | grep -oP 'FARID=\\K\\d+' | paste -sd "," -)
+    if [ -z "$FARIDS" ]; then
+        printf "%-28s | %-10s | %-20s\\n" "$SUPI" "FAILED" "N/A"
+        FAIL=$((FAIL+1))
+    else
+        printf "%-28s | %-10s | %-20s\\n" "$SUPI" "SUCCESS" "$FARIDS"
+        SUCCESS=$((SUCCESS+1))
+    fi
+    sleep 0.5
+done
+echo "------------------------------------------------------------"
+echo "Steered $SUCCESS/${{#SUPI_LIST[@]}} UEs to $TARGET"
+[ $FAIL -eq 0 ] &amp;&amp; exit 0 || exit 1
+"""
+
+    r = subprocess.run(
+        ["ssh", f"{FREE5GC_USER}@{FREE5GC_IP}", "bash", "-s"],
+        input=bash_cmd,
+        capture_output=True, text=True,
+        timeout=60
+    )
+
+    for line in r.stdout.splitlines():
+        log.info(f"  {line}")
+    if r.returncode != 0 and r.stderr:
+        log.error(f"  [stderr] {r.stderr[:200]}")
+
+    return r.returncode == 0
+
+def log_convergence(attack_label, time_to_heal, total_converge,
+                    first_detection, last_detection,
+                    polls_to_detection, pps_at_detection,
+                    normal_ue_count, malicious_ue_count):
+    log.info("=" * 60)
+    log.info("CONVERGENCE METRICS")
+    log.info(f"  Attack type          : {attack_label}")
+    log.info(f"  PPS at detection     : {pps_at_detection}")
+#    log.info(f"  Polls to detection   : {polls_to_detection}")
+    log.info(f"  Time to heal         : {time_to_heal:.2f}s")
+    log.info(f"  Total convergence    : {total_converge:.2f}s")
+#    log.info(f"  Confirmation window  : {CONFIRM_SECS}s")
+    log.info("=" * 60)
+    log.info("STEERING SUMMARY")
+    log.info(f"  Normal UEs kept      : {normal_ue_count} → {MONITOR_IP}")
+    log.info(f"  Malicious UEs steered: {malicious_ue_count} → {FAILOVER_IP}")
+    log.info("=" * 60)
+    log.info("DETECTION TIMELINE")
+    log.info(f"  First detection      : {time.strftime('%H:%M:%S', time.localtime(first_detection))}")
+    log.info(f"  Healing complete     : {time.strftime('%H:%M:%S', time.localtime(last_detection))}")
+    log.info(f"  Duration             : {last_detection - first_detection:.2f}s")
+    log.info("=" * 60)
+
+# ─────────────────────────────────────────────
+# 6. MAIN AGENT LOOP (LSTM-ONLY DETECTION)
+# ─────────────────────────────────────────────
+def main():
+    clf_model, clf_scaler, clf_le = load_classifier()
+
+    log.info("=" * 60)
+    log.info("AGENT STARTED — LSTM-ONLY DETECTION MODE")
+    log.info("=" * 60)
+    log.info(f"  Monitoring N9       : {I_UPF_IP} → {MONITOR_IP}")
+    log.info(f"  Flood probe         : {I_UPF_IP}:ens18 (UDP port 2152)")
+    log.info(f"  Steer API           : {FREE5GC_IP} → {STEER_URL}")
+    log.info(f"  Normal UEs          : {[s[-4:] for s in SUPI_NORMAL]} → stay on {MONITOR_IP}")
+    log.info(f"  Malicious UEs       : {[s[-4:] for s in SUPI_MALICIOUS]} → steer to {FAILOVER_IP}")
+    log.info(f"  Confirmation delay  : {CONFIRM_SECS}s")
+    log.info(f"  Detection mode      : PURE LSTM (ML-based)")
+    log.info("=" * 60)
+
+    t_detected         = None
+    first_detection    = None
+    attack_label       = "UNKNOWN"
+    poll_count         = 0       # ← NEW
+    polls_to_detection = 0       # ← NEW
+    pps_at_detection   = 0       # ← NEW
+
+    while True:
+        ping_result  = {}
+        flood_result = {}
+
+        def run_ping():
+            loss, sent, received, lost, fs, ls = ping_loss_detail(MONITOR_IP)
+            ping_result.update({
+                "loss": loss, "sent": sent, "received": received,
+                "lost": lost, "first_seq": fs, "last_seq": ls
+            })
+
+        def run_flood_probe():
+            features, pps = collect_flood_features()
+            flood_result.update({"features": features, "pps": pps})
+
+        t1 = threading.Thread(target=run_ping,        daemon=True)
+        t2 = threading.Thread(target=run_flood_probe, daemon=True)
+        t1.start(); t2.start()
+        t1.join();  t2.join()
+
+        loss      = ping_result.get("loss", 0.0)
+        sent      = ping_result.get("sent", 0)
+        lost      = ping_result.get("lost", 0)
+        first_seq = ping_result.get("first_seq")
+        last_seq  = ping_result.get("last_seq")
+        features  = flood_result.get("features", {})
+        pps       = flood_result.get("pps", 0)
+
+        poll_count += 1  # ← NEW
+
+        log.info(
+            f"[Poll #{poll_count}] N9 loss={loss:.1f}%  sent={sent}  lost={lost}  "
+            f"seqs={first_seq}-{last_seq}  |  ens18 GTP-U pps={pps}"
+        )
+
+        # ── LSTM-ONLY DETECTION ───────────────────────────────────────────
+        attack_detected = False
+        detected_class  = classify_metrics(clf_model, clf_scaler, clf_le, features)
+
+        if detected_class == CLASS_GTP_FLOOD:
+            attack_detected = True
+            attack_label    = "GTP_FLOOD"
+            log.warning(
+                f"[LSTM] GTP_FLOOD detected "
+                f"(class={detected_class}, pps={pps}, loss={loss:.1f}%)"
+            )
+        elif detected_class != CLASS_NORMAL:
+            attack_detected = True
+            attack_label    = "GRAY_FAILURE"
+            log.warning(
+                f"[LSTM] GRAY_FAILURE detected "
+                f"(class={detected_class}, pps={pps}, loss={loss:.1f}%)"
+            )
+
+        # ── HEALING LOGIC ─────────────────────────────────────────────────
+        if attack_detected:
+            if t_detected is None:
+                t_detected         = time.time()
+                first_detection    = t_detected
+                polls_to_detection = poll_count   # ← NEW
+                pps_at_detection   = pps          # ← NEW
+                log.info(
+                    f"⚠ Attack detected at poll #{polls_to_detection} "
+                    f"(pps={pps_at_detection}) — confirming for {CONFIRM_SECS}s..."
+                )
+
+            elif time.time() - t_detected &gt; CONFIRM_SECS:
+                log.warning(f"✓ Attack CONFIRMED ({attack_label}) — initiating healing...")
+                t_heal = time.time()
+
+                if attack_label == "GTP_FLOOD":
+                    log.info(f"  → Keeping  {len(SUPI_NORMAL)} normal UEs on {MONITOR_IP}")
+                    log.info(f"  → Steering {len(SUPI_MALICIOUS)} malicious UEs to {FAILOVER_IP}")
+
+                    if steer_list(SUPI_MALICIOUS, FAILOVER_IP):
+                        time_to_heal   = time.time() - t_heal
+                        total_converge = time.time() - t_detected
+
+                        log_convergence(
+                            attack_label, time_to_heal, total_converge,
+                            first_detection, time.time(),
+                            polls_to_detection, pps_at_detection,  # ← NEW
+                            len(SUPI_NORMAL), len(SUPI_MALICIOUS)  # ← NEW
+                        )
+                        log.info("Agent terminating after successful healing.")
+                        break
+                    else:
+                        log.error("Steering failed — retrying...")
+                        t_detected = None
+
+                else:
+                    log.info(f"  → Steering ALL {len(SUPI_NORMAL + SUPI_MALICIOUS)} UEs to {FAILOVER_IP}")
+
+                    if steer_list(SUPI_NORMAL + SUPI_MALICIOUS, FAILOVER_IP):
+                        time_to_heal   = time.time() - t_heal
+                        total_converge = time.time() - t_detected
+
+                        log_convergence(
+                            attack_label, time_to_heal, total_converge,
+                            first_detection, time.time(),
+                            polls_to_detection, pps_at_detection,
+                            len(SUPI_NORMAL), len(SUPI_MALICIOUS)
+                        )
+                        log.info("Agent terminating after successful healing.")
+                        break
+                    else:
+                        log.error("Steering failed — retrying...")
+                        t_detected = None
+
+        else:
+            if t_detected is not None:
+                log.info("✓ Attack cleared — resetting detection state")
+            t_detected = None
+
+        time.sleep(2)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        log.info("\nAgent stopped by user")
+    except Exception as e:
+        log.error(f"Agent crashed: {e}", exc_info=True)
+</code></pre>
+        </div>
+
+        <div class="callout callout-success"><span class="callout-icon">&#10003;</span>
+          <div class="callout-body"><strong>Closed-loop result</strong>Detection, confirmation, and per-UE steering
+            happen autonomously in single-digit seconds &mdash; the two attacker flows are isolated on the backup
+            anchor while the six legitimate UEs keep running on the active anchor without interruption.</div>
+        </div>
+      </section>
+
+
+      <section id="multiue">
+        <div class="section-label"><span class="section-num">&sect; 14</span><span class="section-rule"></span></div>
+        <h2>Multi-UE Steering</h2>
+        <p>The original single-UE <code>steering.go</code> handler worked for one session but silently failed with
+          multiple UEs. Two root-cause bugs were fixed; the corrected handler is the one shown in full in &sect; 07.</p>
+        <h3>Bug A &mdash; stale-IP guard broke idempotency</h3>
+        <div class="callout callout-error"><span class="callout-icon">&#10005;</span>
+          <div class="callout-body"><strong>Symptom</strong>Re-firing a steer (or steering when some FARs already
+            pointed elsewhere) skipped those FARs, so the operation was not idempotent and left flows split across
+            anchors.</div>
+        </div>
+        <p>The original FAR-collection loop guarded on the FAR's current <code>OuterHeaderCreation</code> IP, treating a
+          FAR that didn't match the "old" UPF as already handled and skipping it. The fix removes that guard and instead
+          collects <strong>every</strong> non-default data-path node whose uplink PDR has an SDF filter, a FAR, and an
+          <code>OuterHeaderCreation</code> &mdash; regardless of where it currently points.</p>
+        <div class="diff-wrap">
+          <div class="diff-bar"><span class="diff-title">FAR collection &mdash; drop the stale-IP guard</span><span
+              class="diff-file-label">processor/steering.go</span></div>
+          <div class="diff-body">
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text">for node :=
+                dp.FirstDPNode; node != nil; node = node.Next() {</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">  ohc :=
+                node.UpLinkTunnel.PDR.FAR.ForwardingParameters.OuterHeaderCreation</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">  if
+                ohc != nil &amp;&amp; ohc.Ipv4Address.String() == oldUPFIP { continue } // "already steered"</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  if
+                node.UpLinkTunnel == nil || node.UpLinkTunnel.PDR == nil { continue }</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  pdr :=
+                node.UpLinkTunnel.PDR</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  if
+                pdr.PDI.SDFFilter == nil || pdr.FAR == nil ||</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">     pdr.FAR.ForwardingParameters
+                == nil ||</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">     pdr.FAR.ForwardingParameters.OuterHeaderCreation
+                == nil { continue }</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  ulcfNodes =
+                append(ulcfNodes, node)</span></div>
+            <div class="diff-line diff-ctx-line"><span class="diff-gutter"> </span><span class="diff-text">}</span></div>
+          </div>
+        </div>
+        <h3>Bug B &mdash; only the first FAR was updated</h3>
+        <div class="callout callout-error"><span class="callout-icon">&#10005;</span>
+          <div class="callout-body"><strong>Symptom</strong>With N UEs, only one UE's flow moved. Every UE has its own
+            SDF-filtered uplink FAR on the I-UPF, but the handler updated and sent only <code>ulcfNodes[0]</code>.</div>
+        </div>
+        <p>The fix loops over all collected nodes, rewrites each FAR's <code>OuterHeaderCreation</code> to the target
+          UPF (preserving each existing TEID), appends each to <code>farList</code>/<code>pdrList</code>, and sends them
+          all in a <strong>single</strong> PFCP Session Modification to the I-UPF.</p>
+        <div class="diff-wrap">
+          <div class="diff-bar"><span class="diff-title">Update every FAR, not just [0]</span><span
+              class="diff-file-label">processor/steering.go</span></div>
+          <div class="diff-body">
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">node :=
+                ulcfNodes[0]</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">ulFAR
+                := node.UpLinkTunnel.PDR.FAR</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span
+                class="diff-text">ulFAR.ForwardingParameters.OuterHeaderCreation.Ipv4Address = targetIP</span></div>
+            <div class="diff-line diff-del-line"><span class="diff-gutter">&minus;</span><span class="diff-text">farList
+                = []*context.FAR{ulFAR}</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">for _, node
+                := range ulcfNodes {</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  ulFAR :=
+                node.UpLinkTunnel.PDR.FAR</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  teid :=
+                ulFAR.ForwardingParameters.OuterHeaderCreation.Teid</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  ulFAR.ForwardingParameters.OuterHeaderCreation
+                = &amp;pfcpType.OuterHeaderCreation{</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">     OuterHeaderCreationDescription:
+                pfcpType.OuterHeaderCreationGtpUUdpIpv4,</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">     Ipv4Address:
+                targetIP, Teid: teid,</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  }</span>
+            </div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  ulFAR.State
+                = smf_context.RULE_UPDATE</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  pdrList =
+                append(pdrList, node.UpLinkTunnel.PDR)</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">  farList =
+                append(farList, ulFAR)</span></div>
+            <div class="diff-line diff-add-line"><span class="diff-gutter">+</span><span class="diff-text">}</span>
+            </div>
+          </div>
+        </div>
+        <div class="callout callout-info"><span class="callout-icon">&#9432;</span>
+          <div class="callout-body"><strong>Verifying per-UE moves</strong>The <code>X-Debug-FAR</code> response header
+            lists every <code>FARID</code> that was updated and the UPF each now points to &mdash; so you can confirm at
+            a glance that all targeted UEs (and only those) were steered.</div>
+        </div>
+      </section>
+
+      <section id="links">
+        <div class="section-label"><span class="section-num">&sect; 15</span><span class="section-rule"></span></div>
+        <h2>Helpful Links</h2>
+        <p>Upstream projects and references used across this implementation.</p>
+        <div class="vm-table-wrap">
+          <table class="vm-table">
+            <thead>
+              <tr>
+                <th>Resource</th>
+                <th>Link</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>ULCL 2-anchor sample config (s5uishida)</td>
+                <td><a href="https://github.com/s5uishida/free5gc_ueransim_ulcl_2_sample_config" target="_blank"
+                    rel="noopener">github.com/s5uishida/free5gc_ueransim_ulcl_2_sample_config</a></td>
+              </tr>
+              <tr>
+                <td>go-upf (UPF implementation)</td>
+                <td><a href="https://github.com/free5gc/go-upf" target="_blank"
+                    rel="noopener">github.com/free5gc/go-upf</a></td>
+              </tr>
+              <tr>
+                <td>free5GC core</td>
+                <td><a href="https://github.com/free5gc/free5gc" target="_blank"
+                    rel="noopener">github.com/free5gc/free5gc</a></td>
+              </tr>
+              <tr>
+                <td>gtp5g kernel module</td>
+                <td><a href="https://github.com/free5gc/gtp5g" target="_blank"
+                    rel="noopener">github.com/free5gc/gtp5g</a></td>
+              </tr>
+              <tr>
+                <td>go-gtp5gnl (gogtp5g-tunnel)</td>
+                <td><a href="https://github.com/free5gc/go-gtp5gnl" target="_blank"
+                    rel="noopener">github.com/free5gc/go-gtp5gnl</a></td>
+              </tr>
+              <tr>
+                <td>UERANSIM (gNB / UE simulator)</td>
+                <td><a href="https://github.com/aligungr/UERANSIM" target="_blank"
+                    rel="noopener">github.com/aligungr/UERANSIM</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Copy-to-clipboard for code blocks
+    function copyCode(btn) {
+      var wrap = btn.closest('.code-wrap');
+      var codeEl = wrap ? wrap.querySelector('pre code') : null;
+      if (!codeEl) return;
+      var text = codeEl.innerText;
+      var done = function () {
+        var original = btn.textContent;
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(function () {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+          fallbackCopy(text); done();
+        });
+      } else {
+        fallbackCopy(text); done();
+      }
+    }
+
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) { }
+      document.body.removeChild(ta);
+    }
+
+    // Scroll-spy: highlight the active section in the sidebar nav
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll('aside a[href^="#"]'));
+      var sections = links
+        .map(function (a) {
+          var id = a.getAttribute('href').slice(1);
+          var el = document.getElementById(id);
+          return el ? { link: a, el: el } : null;
+        })
+        .filter(Boolean);
+      if (!sections.length) return;
+
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            var id = entry.target.id;
+            links.forEach(function (a) {
+              a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+            });
+          }
+        });
+      }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+      sections.forEach(function (s) { observer.observe(s.el); });
+    })();
+  </script>
+</body>
+
+</html>
